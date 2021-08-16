@@ -4,6 +4,7 @@ import com.gxk.jvm.classfile.ClassFile;
 import com.gxk.jvm.classfile.ConstantPool;
 import com.gxk.jvm.classfile.attribute.BootstrapMethods;
 import com.gxk.jvm.classloader.ClassLoader;
+import com.gxk.jvm.interpret.Interpreter;
 import com.gxk.jvm.rtda.Frame;
 
 import java.util.ArrayList;
@@ -236,12 +237,9 @@ public class Class {
           throw new IllegalStateException();
         }
 
-        Frame newFrame = new Frame(cinit);
         tmp.setStat(1);
-        Class finalClass = tmp;
-        newFrame.setOnPop(() -> finalClass.setStat(2));
-        frame.thread.pushFrame(newFrame);
-        frame.nextPc = frame.getPc();
+        Interpreter.execute(cinit);
+        tmp.setStat(2);
       }
     }
     this.setInterfaces(interfaces);

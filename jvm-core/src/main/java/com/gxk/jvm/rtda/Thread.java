@@ -27,9 +27,6 @@ public class Thread {
       throw new IllegalStateException("empty stack");
     }
     Frame frame = frames[--top];
-    if (frame.getOnPop() != null) {
-      frame.getOnPop().run();
-    }
     frames[top] = null; // 从数组中移除引用。
     return frame;
   }

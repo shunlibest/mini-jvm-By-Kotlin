@@ -1,5 +1,6 @@
 package com.gxk.jvm.nativebridge.java.lang;
 
+import com.gxk.jvm.interpret.Interpreter;
 import com.gxk.jvm.rtda.Frame;
 import com.gxk.jvm.rtda.UnionSlot;
 import com.gxk.jvm.rtda.heap.Class;
@@ -56,11 +57,9 @@ public abstract class ClassBridge {
               throw new IllegalStateException();
             }
 
-            Frame newFrame = new Frame(cinit);
             clazz.setStat(1);
-            Class finalClass = clazz;
-            newFrame.setOnPop(() -> finalClass.setStat(2));
-            frame.thread.pushFrame(newFrame);
+            Interpreter.execute(cinit);
+            clazz.setStat(2);
           }
         });
 

@@ -57,6 +57,9 @@ public class InvokeInterfaceInst implements Instruction {
       }
 
       // already load interface
+      if (clazz.getInterfaces().isEmpty()) {
+        clazz.interfaceInit(frame);
+      }
       if (!clazz.getInterfaces().isEmpty()) {
         for (Class intClass : clazz.getInterfaces()) {
           method= intClass.getMethod(methodName, methodDescriptor);
@@ -64,9 +67,6 @@ public class InvokeInterfaceInst implements Instruction {
             break;
           }
         }
-      } else {
-        clazz.interfaceInit(frame);
-        return;
       }
     }
 

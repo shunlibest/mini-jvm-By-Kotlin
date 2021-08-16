@@ -4,6 +4,7 @@ import com.gxk.jvm.instruction.Instruction;
 
 
 import com.gxk.jvm.classloader.ClassLoader;
+import com.gxk.jvm.interpret.Interpreter;
 import com.gxk.jvm.rtda.*;
 import com.gxk.jvm.rtda.heap.Heap;
 import com.gxk.jvm.rtda.heap.Class;
@@ -26,22 +27,22 @@ public class NewInst implements Instruction {
 
   @Override
   public void execute(Frame frame) {
-    Class aClass = Heap.findClass(clazz);
+    Class cls = Heap.findClass(clazz);
 
-    if (aClass == null) {
+    if (cls == null) {
       ClassLoader loader = frame.method.clazz.classLoader;
-      aClass = loader.loadClass(clazz);
+      cls = loader.loadClass(clazz);
     }
 
-    if (aClass == null) {
+    if (cls == null) {
       throw new IllegalStateException(ClassNotFoundException.class.getName());
     }
 
-    if (!aClass.getStat()) {
+    if (!cls.getStat()) {
       // interfaceInit
-      Method cinit = aClass.getClinitMethod();
+      Method cinit = cls.getClinitMethod();
       if (cinit == null) {
-        aClass.setStat(2);
+        cls.setStat(2);
         frame.nextPc = frame.getPc();
         return;
       }
@@ -51,18 +52,13 @@ public class NewInst implements Instruction {
       if (clm != null) {
         clm.invoke(frame);
       } else {
-        Frame newFrame = new Frame(cinit);
-        aClass.setStat(1);
-        Class finalClass = aClass;
-        newFrame.setOnPop(() -> finalClass.setStat(2));
-        frame.thread.pushFrame(newFrame);
-
-        frame.nextPc = frame.getPc();
-        return;
+        cls.setStat(1);
+        Interpreter.execute(cinit);
+        cls.setStat(2);
       }
     }
 
-    Instance obj = aClass.newInstance();
+    Instance obj = cls.newInstance();
     frame.pushRef(obj);
   }
 

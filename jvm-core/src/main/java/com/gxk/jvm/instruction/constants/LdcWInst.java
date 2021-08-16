@@ -1,17 +1,17 @@
 package com.gxk.jvm.instruction.constants;
 
 import com.gxk.jvm.instruction.Instruction;
-
-
+import com.gxk.jvm.interpret.Interpreter;
 import com.gxk.jvm.rtda.Frame;
 import com.gxk.jvm.rtda.UnionSlot;
-import com.gxk.jvm.rtda.heap.Heap;
-import com.gxk.jvm.rtda.heap.InstanceArray;
 import com.gxk.jvm.rtda.heap.Class;
 import com.gxk.jvm.rtda.heap.Field;
+import com.gxk.jvm.rtda.heap.Heap;
 import com.gxk.jvm.rtda.heap.Instance;
+import com.gxk.jvm.rtda.heap.InstanceArray;
 
 public class LdcWInst implements Instruction {
+
   public final String descriptor;
   public final Object val;
 
@@ -40,14 +40,9 @@ public class LdcWInst implements Instruction {
           klass = frame.method.clazz.classLoader.loadClass("java/lang/String");
         }
         if (!klass.getStat()) {
-          Frame newFrame = new Frame(klass.getMethod("<clinit>", "()V"));
           klass.setStat(1);
-          Class finalKlass = klass;
-          newFrame.setOnPop(() -> finalKlass.setStat(2));
-          frame.thread.pushFrame(newFrame);
-
-          frame.nextPc = frame.getPc();
-          return;
+          Interpreter.execute(klass.getMethod("<clinit>", "()V"));
+          klass.setStat(2);
         }
         Instance object = klass.newInstance();
         Field field = object.getField("value", "[C");

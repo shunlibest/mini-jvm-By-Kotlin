@@ -15,8 +15,6 @@ public class Frame {
   public int nextPc;
   private int pc;
 
-  private Runnable onPop;
-
   public int stat;
 
   public Frame(Method method) {
@@ -38,14 +36,6 @@ public class Frame {
   public Instruction getInst() {
     this.pc = nextPc;
     return this.instructionMap.get(this.pc);
-  }
-
-  public Runnable getOnPop() {
-    return onPop;
-  }
-
-  public void setOnPop(Runnable onPop) {
-    this.onPop = onPop;
   }
 
   // operand stack operation
