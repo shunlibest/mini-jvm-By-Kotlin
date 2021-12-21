@@ -5,6 +5,9 @@
 
 <div align=center><img height="300px" width="300px" src="docs/assets/imgs/mini-jvm-logo.png"/></div>
 
+## 和原版的区别
+本项目主要是对原版的fork，再原有基础上，部分代码使用kotlin实现，不会改变代码流程（不会的可以学习一下，能够简化部分代码实现，把精力放在原理上）
+
 ## 特性
 
 ### 元循环(Metacircular)
