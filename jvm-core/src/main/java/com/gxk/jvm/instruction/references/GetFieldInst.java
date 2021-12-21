@@ -29,14 +29,14 @@ public class GetFieldInst implements Instruction {
   public void execute(Frame frame) {
     // hack for java/nio/charset/Charset name Ljava/lang/String;
     if (clazz.equals("java/nio/charset/Charset") && fieldName.equals("name")) {
-      Instance obj = ((Instance) frame.popRef());
+      Instance obj = frame.popRef();
       Field field = obj.getField(fieldName, fieldDescriptor);
       field.val = UnionSlot.of(Utils.str2Obj("UTF-8", obj.clazz.classLoader));
       field.get(frame);
       return;
     }
 
-    Instance obj = ((Instance) frame.popRef());
+    Instance obj = frame.popRef();
     Field field = obj.getField(fieldName, fieldDescriptor);
     field.get(frame);
   }

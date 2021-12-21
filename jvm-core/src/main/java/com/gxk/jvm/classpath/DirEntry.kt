@@ -1,50 +1,38 @@
-package com.gxk.jvm.classpath;
+package com.gxk.jvm.classpath
 
-import com.gxk.jvm.classfile.ClassFile;
-import com.gxk.jvm.classfile.ClassReader;
-import com.gxk.jvm.util.EnvHolder;
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Objects;
+import com.gxk.jvm.classfile.ClassFile
+import com.gxk.jvm.classfile.ClassReader
+import java.util.Objects
+import com.gxk.jvm.util.EnvHolder
+import java.io.IOException
+import com.gxk.jvm.classpath.DirEntry
+import java.io.File
+import java.lang.IllegalArgumentException
 
-public class DirEntry implements Entry {
+class DirEntry(private val dirPath: String) : Entry {
 
-  public final String dirPath;
-
-  public DirEntry(String dirPath) {
-    this.dirPath = dirPath;
-  }
-
-  @Override
-  public ClassFile findClass(String clazzName) {
-    if (!clazzName.contains("/")) {
-      String[] list = new File(dirPath).list();
-      if (list == null) {
-        throw new IllegalArgumentException();
-      }
-      for (String name : list) {
-        if (Objects.equals(name, clazzName + ".class")) {
-          String path = dirPath + EnvHolder.FILE_SEPARATOR + clazzName + ".class";
-          ClassFile cf = null;
-          try {
-            cf = ClassReader.read(path);
-          } catch (IOException e) {
-            throw new IllegalArgumentException();
-          }
-          cf.setSource(path);
-          return cf;
+    override fun findClass(clazzName: String): ClassFile? {
+        if (!clazzName.contains("/")) {
+            val list = File(dirPath).list() ?: throw IllegalArgumentException()
+            for (name in list) {
+                if (name == "$clazzName.class") {
+                    val path = dirPath + EnvHolder.FILE_SEPARATOR + clazzName + ".class"
+                    val cf: ClassFile = try {
+                        ClassReader.read(path)
+                    } catch (e: IOException) {
+                        throw IllegalArgumentException()
+                    }
+                    cf.source = path
+                    return cf
+                }
+            }
+            return null
         }
-      }
-      return null;
+        val idx = clazzName.indexOf("/")
+        val subDir = clazzName.substring(0, idx)
+        val subPath = dirPath + EnvHolder.FILE_SEPARATOR + subDir
+        return if (!File(subPath).exists()) {
+            null
+        } else DirEntry(subPath).findClass(clazzName.substring(idx + 1))
     }
-
-    int idx = clazzName.indexOf("/");
-    String subDir = clazzName.substring(0, idx);
-    String subPath = dirPath + EnvHolder.FILE_SEPARATOR + subDir;
-    if (!new File(subPath).exists()) {
-      return null;
-    }
-    return new DirEntry(subPath).findClass(clazzName.substring(idx + 1));
-  }
 }

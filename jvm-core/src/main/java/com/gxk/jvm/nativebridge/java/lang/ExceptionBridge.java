@@ -9,8 +9,8 @@ public abstract class ExceptionBridge {
 
   public static void registerNatives0() {
     Heap.registerMethod("java/lang/Exception_<init>_(Ljava/lang/String;)V", frame -> {
-      Instance str = (Instance) frame.popRef();
-      Instance thisObj = (Instance) frame.popRef();
+      Instance str = frame.popRef();
+      Instance thisObj = frame.popRef();
       Field msgField = thisObj.getField("detailMessage", "Ljava/lang/String;");
       msgField.val = UnionSlot.of(str);
     });

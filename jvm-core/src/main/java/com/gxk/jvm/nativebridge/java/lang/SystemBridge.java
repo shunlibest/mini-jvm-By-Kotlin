@@ -56,7 +56,7 @@ public abstract class SystemBridge {
 
     // hack
     Heap.registerMethod("java/lang/System_getenv_(Ljava/lang/String;)Ljava/lang/String;", frame -> {
-      Instance nameObj = (Instance) frame.popRef();
+      Instance nameObj = frame.popRef();
 
       String val = System.getenv(Utils.obj2Str(nameObj));
       if (val == null) {

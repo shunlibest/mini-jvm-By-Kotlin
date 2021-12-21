@@ -14,8 +14,8 @@ public abstract class FileInputStreamBridge {
 
   public static void registerNatives0() {
     Heap.registerMethod("java/io/FileInputStream_open0_(Ljava/lang/String;)V", frame -> {
-      Instance fileName = (Instance) frame.popRef();
-      Instance thisObj = (Instance) frame.popRef();
+      Instance fileName = frame.popRef();
+      Instance thisObj = frame.popRef();
 
       String filePath = Utils.obj2Str(fileName);
       try {
@@ -27,8 +27,8 @@ public abstract class FileInputStreamBridge {
     });
 
     Heap.registerMethod("java/io/FileInputStream_<init>_(Ljava/io/FileDescriptor;)V", frame -> {
-      Instance fd = (Instance) frame.popRef();
-      Instance thisObj = (Instance) frame.popRef();
+      Instance fd = frame.popRef();
+      Instance thisObj = frame.popRef();
       int fdInt = fd.getField("fd", "I").val.getInt();
       try {
         if (fdInt == 0) {
@@ -43,7 +43,7 @@ public abstract class FileInputStreamBridge {
     });
 
     Heap.registerMethod("java/io/FileInputStream_available0_()I", frame -> {
-      Instance thisObj = (Instance) frame.popRef();
+      Instance thisObj = frame.popRef();
       FileInputStream extra = (FileInputStream) thisObj.getExtra();
       try {
         int available = extra.available();
@@ -54,7 +54,7 @@ public abstract class FileInputStreamBridge {
     });
 
     Heap.registerMethod("java/io/FileInputStream_close0_()V", frame -> {
-      Instance thisObj = (Instance) frame.popRef();
+      Instance thisObj = frame.popRef();
       FileInputStream extra = (FileInputStream) thisObj.getExtra();
       try {
         extra.close();
@@ -64,7 +64,7 @@ public abstract class FileInputStreamBridge {
     });
 
     Heap.registerMethod("java/io/FileInputStream_read0_()I", frame -> {
-      Instance thisObj = (Instance) frame.popRef();
+      Instance thisObj = frame.popRef();
       FileInputStream extra = (FileInputStream) thisObj.getExtra();
       try {
         int read = extra.read();
@@ -76,7 +76,7 @@ public abstract class FileInputStreamBridge {
 
     Heap.registerMethod("java/io/FileInputStream_skip0_(J)J", frame -> {
       Long val = frame.popLong();
-      Instance thisObj = (Instance) frame.popRef();
+      Instance thisObj = frame.popRef();
       FileInputStream extra = (FileInputStream) thisObj.getExtra();
       try {
         long skip = extra.skip(val);
@@ -91,7 +91,7 @@ public abstract class FileInputStreamBridge {
       Integer v2 = frame.popInt();
       PrimitiveArray v1 = (PrimitiveArray) frame.popRef();
       byte[] ba = new byte[v1.len];
-      Instance thisObj = (Instance) frame.popRef();
+      Instance thisObj = frame.popRef();
       FileInputStream extra = (FileInputStream) thisObj.getExtra();
       try {
         int read = extra.read(ba, v2, v3);

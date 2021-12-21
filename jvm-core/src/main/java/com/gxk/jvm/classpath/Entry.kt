@@ -1,8 +1,8 @@
-package com.gxk.jvm.classpath;
+package com.gxk.jvm.classpath
 
-import com.gxk.jvm.classfile.ClassFile;
+import com.gxk.jvm.classfile.ClassFile
+
 
 public interface Entry {
-
-  ClassFile findClass(String name);
+    fun findClass(name: String): ClassFile?
 }

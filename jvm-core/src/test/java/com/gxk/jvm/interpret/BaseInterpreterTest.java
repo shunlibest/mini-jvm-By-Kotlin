@@ -58,7 +58,7 @@ public abstract class BaseInterpreterTest {
     String classpath = Utils.classpath(exampleJarPath.toFile().getAbsolutePath());
     Entry entry = Classpath.parse(classpath);
     ClassLoader loader = new ClassLoader("boot", entry);
-    VirtualMachine.initVm(loader);
+    VirtualMachine.Companion.initVm(loader);
     Class clazz = loader.loadClass(clazzName);
     return clazz;
   }

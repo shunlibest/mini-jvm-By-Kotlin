@@ -1,58 +1,56 @@
-package com.gxk.jvm.rtda.heap;
+package com.gxk.jvm.rtda.heap
 
-import com.gxk.jvm.util.EnvHolder;
-import com.gxk.jvm.util.Logger;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.gxk.jvm.rtda.heap.NativeMethod
+import com.gxk.jvm.rtda.heap.Heap
+import java.lang.IllegalStateException
+import com.gxk.jvm.util.EnvHolder
+import com.gxk.jvm.util.Logger
+import java.util.ArrayList
+import java.util.HashMap
 
 /**
  * jvm heap
  */
-public abstract class Heap {
+object Heap {
+    //native方法
+    private val NATIVE_METHOD_MAP: MutableMap<String, NativeMethod> = HashMap()
 
-  private static final Map<String, NativeMethod> NATIVE_METHOD_MAP;
-  private static final Map<String, Class> STRING_K_CLASS_MAP;
+    //存储加载后的class方法
+    private val STRING_K_CLASS_MAP: MutableMap<String, Class> = HashMap()
 
-  static {
-    NATIVE_METHOD_MAP = new HashMap<>();
-    STRING_K_CLASS_MAP = new HashMap<>();
-  }
-
-  public static void registerMethod(String key, NativeMethod method) {
-    if (NATIVE_METHOD_MAP.containsKey(key)) {
-      throw new IllegalStateException();
+    fun registerMethod(key: String, method: NativeMethod) {
+        check(!NATIVE_METHOD_MAP.containsKey(key))
+        NATIVE_METHOD_MAP[key] = method
     }
-    NATIVE_METHOD_MAP.put(key, method);
-  }
 
-  public static NativeMethod findMethod(String key) {
-    return NATIVE_METHOD_MAP.get(key);
-  }
-
-  public static Class findClass(String name) {
-    return STRING_K_CLASS_MAP.get(name);
-  }
-
-  public static void registerClass(String name, Class clazz) {
-    if (EnvHolder.verboseClass) {
-      String source = clazz.classLoader.getName();
-      if (clazz.classFile != null && clazz.classFile.getSource() != null) {
-        source = clazz.classFile.getSource();
-      }
-      Logger.clazz("[Loaded ".concat(name).concat(" from ").concat(source) + "]");
+    fun findMethod(key: String): NativeMethod? {
+        return NATIVE_METHOD_MAP[key]
     }
-    STRING_K_CLASS_MAP.putIfAbsent(name, clazz);
-  }
 
-  public static List<Class> getClasses() {
-    return new ArrayList<>(STRING_K_CLASS_MAP.values());
-  }
+    fun findClass(name: String): Class? {
+        return STRING_K_CLASS_MAP[name]
+    }
 
-  // for test
-  public static void clear() {
-    NATIVE_METHOD_MAP.clear();
-    STRING_K_CLASS_MAP.clear();
-  }
+    fun registerClass(name: String, clazz: Class) {
+        if (EnvHolder.verboseClass) {
+            var source = clazz.classLoader.name
+            if (clazz.classFile != null && clazz.classFile.source != null) {
+                source = clazz.classFile.source
+            }
+            Logger.clazz("[Loaded $name from $source]")
+        }
+        STRING_K_CLASS_MAP.putIfAbsent(name, clazz)
+    }
+
+
+    fun getClasses(): List<Class> {
+        return ArrayList(STRING_K_CLASS_MAP.values)
+    }
+
+    // for test
+    fun clear() {
+        NATIVE_METHOD_MAP.clear()
+        STRING_K_CLASS_MAP.clear()
+    }
+
 }

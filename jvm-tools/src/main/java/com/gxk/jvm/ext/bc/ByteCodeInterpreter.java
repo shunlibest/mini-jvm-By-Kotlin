@@ -137,6 +137,6 @@ public class ByteCodeInterpreter {
       frame.setInt(i, methodArgs.get(i));
     }
 
-    interpreter.loop(thread);
+    Interpreter.loop(thread);
   }
 }

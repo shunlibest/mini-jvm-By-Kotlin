@@ -21,7 +21,7 @@ public class InstanceofInst implements Instruction {
 
   @Override
   public void execute(Frame frame) {
-    Instance obj = (Instance) frame.popRef();
+    Instance obj = frame.popRef();
     if (obj == null) {
       frame.pushInt(0);
       return;

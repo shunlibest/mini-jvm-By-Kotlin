@@ -14,6 +14,6 @@ public class I2sInst implements Instruction {
   public void execute(Frame frame) {
     Integer integer = frame.popInt();
     short val = integer.shortValue();
-    frame.pushInt(((int) val));
+    frame.pushInt(val);
   }
 }

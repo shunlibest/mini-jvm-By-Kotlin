@@ -48,7 +48,7 @@ public class ClassLoaderTest {
 
     Entry entry = Classpath.parse(exampleJarPath.toFile().getAbsolutePath() + EnvHolder.PATH_SEPARATOR  + jarPath.toFile().getAbsolutePath());
     classLoader = new ClassLoader("boot", entry);
-    VirtualMachine.loadLibrary();
+    VirtualMachine.Companion.loadLibrary();
   }
 
   @After

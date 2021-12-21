@@ -21,10 +21,10 @@ public class Jdb {
       return;
     }
 
-    Args cmd = Args.parseArgs(args);
+    Args cmd = Args.Companion.parseArgs(args);
 
     EnvHolder.debug = true;
-    DebugContextHolder.mainClass = cmd.clazz;
+    DebugContextHolder.mainClass = cmd.getClazz();
     VirtualMachine vm = new VirtualMachine();
     vm.run(cmd);
   }

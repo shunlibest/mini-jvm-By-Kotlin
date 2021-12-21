@@ -1,189 +1,174 @@
-package com.gxk.jvm.rtda;
+package com.gxk.jvm.rtda
 
-import com.gxk.jvm.instruction.Instruction;
-import com.gxk.jvm.rtda.heap.Instance;
-import com.gxk.jvm.rtda.heap.Method;
-import java.util.Map;
+import com.gxk.jvm.instruction.Instruction
+import com.gxk.jvm.rtda.heap.Instance
+import com.gxk.jvm.rtda.heap.Method
 
-public class Frame {
+// 栈帧, 每一个方法, 加载的时候,会生成一个方法栈
+class Frame {
+    val method: Method
+    private val localVars: LocalVars
+    private val operandStack: OperandStack
+    private val instructionMap: Map<Int, Instruction>
+    val thread: Thread
+    var nextPc = 0
+    var pc = 0
+        private set
+    var stat = 0
 
-  public final Method method;
-  private final LocalVars localVars;
-  private final OperandStack operandStack;
-  private final Map<Integer, Instruction> instructionMap;
-  public final Thread thread;
-  public int nextPc;
-  private int pc;
+    constructor(method: Method) {
+        this.method = method
+        localVars = LocalVars(method.maxLocals)
+        operandStack = OperandStack(method.maxStacks)
+        thread = MetaSpace.getMainEnv()
+        instructionMap = method.instructionMap
+    }
 
-  public int stat;
+    constructor(method: Method, localVars: LocalVars, thread: Thread) {
+        this.method = method
+        this.localVars = localVars
+        operandStack = OperandStack(method.maxStacks)
+        this.thread = thread
+        instructionMap = method.instructionMap
+    }
 
-  public Frame(Method method) {
-    this.method = method;
-    this.localVars = new LocalVars(method.maxLocals);
-    this.operandStack = new OperandStack(method.maxStacks);
-    this.thread = MetaSpace.getMainEnv();
-    this.instructionMap = method.instructionMap;
-  }
+    val inst: Instruction?
+        get() {
+            pc = nextPc
+            return instructionMap[pc]
+        }
 
-  public Frame(Method method, LocalVars localVars, Thread thread) {
-    this.method = method;
-    this.localVars = localVars;
-    this.operandStack = new OperandStack(method.maxStacks);
-    this.thread = thread;
-    this.instructionMap = method.instructionMap;
-  }
+    // operand stack operation
+    fun pushInt(`val`: Int) {
+        operandStack.pushInt(`val`)
+    }
 
-  public Instruction getInst() {
-    this.pc = nextPc;
-    return this.instructionMap.get(this.pc);
-  }
+    fun popInt(): Int {
+        return operandStack.popInt()
+    }
 
-  // operand stack operation
+    fun pushLong(`val`: Long) {
+        operandStack.pushLong(`val`)
+    }
 
-  public void pushInt(int val) {
-    this.operandStack.pushInt(val);
-  }
+    fun popLong(): Long {
+        return operandStack.popLong()
+    }
 
-  public int popInt() {
-    return this.operandStack.popInt();
-  }
+    fun pushFloat(`val`: Float) {
+        operandStack.pushFloat(`val`)
+    }
 
-  public void pushLong(long val) {
-    this.operandStack.pushLong(val);
-  }
+    fun popFloat(): Float {
+        return operandStack.popFloat()
+    }
 
-  public long popLong() {
-    return this.operandStack.popLong();
-  }
+    fun pushDouble(`val`: Double) {
+        operandStack.pushDouble(`val`)
+    }
 
-  public void pushFloat(float val) {
-    this.operandStack.pushFloat(val);
-  }
+    fun popDouble(): Double {
+        return operandStack.popDouble()
+    }
 
-  public float popFloat() {
-    return this.operandStack.popFloat();
-  }
+    fun pushRef(`val`: Instance?) {
+        operandStack.pushRef(`val`)
+    }
 
-  public void pushDouble(double val) {
-    this.operandStack.pushDouble(val);
-  }
+    fun popRef(): Instance {
+        return operandStack.popRef()
+    }
 
-  public double popDouble() {
-    return this.operandStack.popDouble();
-  }
+    fun popSlot(): Slot {
+        return operandStack.popSlot()
+    }
 
-  public void pushRef(Instance val) {
-    this.operandStack.pushRef(val);
-  }
+    fun pushSlot(`val`: Slot?) {
+        operandStack.pushSlot(`val`)
+    }
 
-  public Instance popRef() {
-    return this.operandStack.popRef();
-  }
+    // local vars operation
+    fun setInt(index: Int, `val`: Int) {
+        localVars.setInt(index, `val`)
+    }
 
-  public Slot popSlot() {
-    return this.operandStack.popSlot();
-  }
+    fun getInt(index: Int): Int {
+        return localVars.getInt(index)
+    }
 
-  public void pushSlot(Slot val) {
-    this.operandStack.pushSlot(val);
-  }
+    fun setFloat(index: Int, `val`: Float?) {
+        localVars.setFloat(index, `val`!!)
+    }
 
-  // local vars operation
+    fun getFloat(index: Int): Float {
+        return localVars.getFloat(index)
+    }
 
-  public void setInt(int index, int val) {
-    this.localVars.setInt(index, val);
-  }
+    fun getLong(index: Int): Long {
+        return localVars.getLong(index)
+    }
 
-  public int getInt(int index) {
-    return this.localVars.getInt(index);
-  }
+    fun setLong(index: Int, `val`: Long?) {
+        localVars.setLong(index, `val`!!)
+    }
 
-  public void setFloat(int index, Float val) {
-    this.localVars.setFloat(index, val);
-  }
+    fun setDouble(index: Int, `val`: Double?) {
+        localVars.setDouble(index, `val`!!)
+    }
 
-  public Float getFloat(int index) {
-    return this.localVars.getFloat(index);
-  }
+    fun getDouble(index: Int): Double {
+        return localVars.getDouble(index)
+    }
 
-  public Long getLong(int index) {
-    return this.localVars.getLong(index);
-  }
+    fun setRef(index: Int, ref: Instance?) {
+        localVars.setRef(index, ref)
+    }
 
-  public void setLong(int index, Long val) {
-    this.localVars.setLong(index, val);
-  }
+    fun getRef(index: Int): Instance {
+        return localVars.getRef(index)
+    }
 
-  public void setDouble(int index, Double val) {
-    this.localVars.setDouble(index, val);
-  }
+    fun debugNextPc(space: String): String {
+        return """
+               ${space}nextPc = ${Integer.toString(nextPc)}
+               
+               """.trimIndent()
+    }
 
-  public Double getDouble(int index) {
-    return this.localVars.getDouble(index);
-  }
+    fun debugLocalVars(space: String?): String {
+        val sb = StringBuilder()
+        sb.append(localVars.debug(space))
+        return sb.toString()
+    }
 
-  public void setRef(int index, Instance ref) {
-    this.localVars.setRef(index, ref);
-  }
+    fun debugOperandStack(space: String?): String {
+        val sb = StringBuilder()
+        sb.append(operandStack.debug(space))
+        return sb.toString()
+    }
 
-  public Instance getRef(int index) {
-    return this.localVars.getRef(index);
-  }
+    val currentMethodFullName: String
+        get() = method.clazz!!.name + "." + method.name
+    val currentLine: Int
+        get() = method.getLine(pc)
 
-  public LocalVars getLocalVars() {
-    return this.localVars;
-  }
+    fun getCurrentSource(): String? {
+        return method.clazz.getSource()
+    }
+    fun pop(): Slot {
+        return operandStack.popSlot()
+    }
 
-  public OperandStack getOperandStack() {
-    return this.operandStack;
-  }
+    fun push(`val`: Slot?) {
+        operandStack.pushSlot(`val`)
+    }
 
-  public int getPc() {
-    return pc;
-  }
+    operator fun set(i: Int, `val`: Slot?) {
+        localVars[i] = `val`
+    }
 
-  public String debugNextPc(String space) {
-    return space.concat("nextPc = ").concat(Integer.toString(nextPc)).concat("\n");
-  }
-
-  public String debugLocalVars(String space) {
-    StringBuilder sb = new StringBuilder();
-    sb.append(localVars.debug(space));
-    return sb.toString();
-  }
-
-  public String debugOperandStack(String space) {
-    StringBuilder sb = new StringBuilder();
-    sb.append(operandStack.debug(space));
-    return sb.toString();
-  }
-
-  public String getCurrentMethodFullName() {
-    return this.method.clazz.name + "." + this.method.name;
-  }
-
-  public int getCurrentLine() {
-    return this.method.getLine(this.pc);
-  }
-
-  public String getCurrentSource() {
-    return this.method.clazz.getSource();
-  }
-
-  public Slot pop() {
-    return this.operandStack.popSlot();
-  }
-
-  public void push(Slot val) {
-    this.operandStack.pushSlot(val);
-  }
-
-  public void set(int i, Slot val) {
-    this.localVars.set(i, val);
-  }
-
-  public Instance getThis(int size) {
-    final Slot[] slots = this.operandStack.getSlots();
-    return slots[this.operandStack.getTop() - size].ref;
-  }
+    fun getThis(size: Int): Instance {
+        val slots = operandStack.slots
+        return slots[operandStack.top - size].ref
+    }
 }

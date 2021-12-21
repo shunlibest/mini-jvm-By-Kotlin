@@ -58,7 +58,7 @@ public class InvokeDynamicInst implements Instruction {
     String bstMethodDesc = Utils.getString(frame.method.clazz.constantPool, methodType.descriptorIndex);
 
     Class clazz = Heap.findClass(bsTargetClass);
-    Method method = clazz.getLambdaMethod(bsTargetMethod);
+    Method method = clazz.getMethod(bsTargetMethod);
     int maxLocals = method.maxLocals;
 
     String lcname = frame.method.clazz.name + "$" + frame.method.name + "$" + bsTargetClass + "$" + bsTargetMethod;

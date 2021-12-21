@@ -14,7 +14,7 @@ public abstract class PropertiesBridge {
     });
     // mock
     Heap.registerMethod("java/util/Properties_getProperty_(Ljava/lang/String;)Ljava/lang/String;", frame -> {
-      Instance nameObj = (Instance) frame.popRef();
+      Instance nameObj = frame.popRef();
       frame.popRef();
 
       String val = System.getProperty(Utils.obj2Str(nameObj));

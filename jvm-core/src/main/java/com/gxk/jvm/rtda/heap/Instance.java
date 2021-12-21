@@ -1,80 +1,81 @@
 package com.gxk.jvm.rtda.heap;
 
 import com.gxk.jvm.rtda.UnionSlot;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 public class Instance implements Cloneable {
 
-  public final List<Field> fields;
-  public final Class clazz;
-  private Instance superInstance;
+    public final List<Field> fields;
+    public final Class clazz;
+    private Instance superInstance;
 
-  // for class obj
-  private Class metaClass;
+    // for class obj
+    private Class metaClass;
 
-  // extra
-  private Object extra;
+    // extra
+    private Object extra;
 
-  public Instance(Class clazz) {
-    fields = new ArrayList<>();
-    this.clazz = clazz;
-  }
-
-  public Instance(List<Field> fields, Class clazz) {
-    this.fields = fields;
-    this.clazz = clazz;
-  }
-
-  public Field getField(String fieldName, String fieldDescriptor) {
-    // this object
-    for (Field field : fields) {
-      if (Objects.equals(field.name, fieldName) && Objects.equals(field.descriptor, fieldDescriptor)) {
-        return field;
-      }
+    public Instance(Class clazz) {
+        fields = new ArrayList<>();
+        this.clazz = clazz;
     }
 
-    if (this.superInstance == null) {
-      return null;
+    public Instance(List<Field> fields, Class clazz) {
+        this.fields = fields;
+        this.clazz = clazz;
     }
 
-    // super object
-    return this.superInstance.getField(fieldName, fieldDescriptor);
-  }
+    public Field getField(String fieldName, String fieldDescriptor) {
+        // this object
+        for (Field field : fields) {
+            if (Objects.equals(field.name, fieldName) && Objects.equals(field.descriptor, fieldDescriptor)) {
+                return field;
+            }
+        }
 
-  public void setSuperInstance(Instance superInstance) {
-    this.superInstance = superInstance;
-  }
+        if (this.superInstance == null) {
+            return null;
+        }
 
-  public void setField(String name, String desc, UnionSlot val) {
-    Field field = this.getField(name, desc);
-    field.val = val;
-  }
+        // super object
+        return this.superInstance.getField(fieldName, fieldDescriptor);
+    }
 
-  @Override
-  public Object clone() throws CloneNotSupportedException {
-    return super.clone();
-  }
+    public void setSuperInstance(Instance superInstance) {
+        this.superInstance = superInstance;
+    }
 
-  @Override
-  public String toString() {
-    return clazz.name + "@" + this.hashCode();
-  }
+    public void setField(String name, String desc, UnionSlot val) {
+        Field field = this.getField(name, desc);
+        field.val = val;
+    }
 
-  public Class getMetaClass() {
-    return metaClass;
-  }
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+        return super.clone();
+    }
 
-  public void setMetaClass(Class metaClass) {
-    this.metaClass = metaClass;
-  }
+    @Override
+    public String toString() {
+        return clazz.getName() + "@" + this.hashCode();
+    }
 
-  public Object getExtra() {
-    return extra;
-  }
+    public Class getMetaClass() {
+        return metaClass;
+    }
 
-  public void setExtra(Object extra) {
-    this.extra = extra;
-  }
+    public void setMetaClass(Class metaClass) {
+        this.metaClass = metaClass;
+    }
+
+    public Object getExtra() {
+        return extra;
+    }
+
+    public void setExtra(Object extra) {
+        this.extra = extra;
+    }
 }

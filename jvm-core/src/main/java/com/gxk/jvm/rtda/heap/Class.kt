@@ -1,286 +1,244 @@
-package com.gxk.jvm.rtda.heap;
+package com.gxk.jvm.rtda.heap
 
-import com.gxk.jvm.classfile.ClassFile;
-import com.gxk.jvm.classfile.ConstantPool;
-import com.gxk.jvm.classfile.attribute.BootstrapMethods;
-import com.gxk.jvm.classloader.ClassLoader;
-import com.gxk.jvm.interpret.Interpreter;
-import com.gxk.jvm.rtda.Frame;
+import com.gxk.jvm.classfile.ClassFile
+import com.gxk.jvm.classfile.ConstantPool
+import com.gxk.jvm.classfile.attribute.BootstrapMethods
+import com.gxk.jvm.classloader.ClassLoader
+import com.gxk.jvm.interpret.Interpreter
+import com.gxk.jvm.rtda.Frame
+import com.gxk.jvm.rtda.heap.Heap.findClass
+import java.util.function.Consumer
 
-import java.util.ArrayList;
+class Class {
+    val accessFlags: Int
+    val name: String
+    val superClassName: String?
+    val interfaceNames: List<String>
+    val methods: List<Method>
+    val fields: List<Field>
+    val bootstrapMethods: BootstrapMethods?
+    val constantPool: ConstantPool?
+    val classLoader: ClassLoader
+    val classFile: ClassFile?
+    var superClass: Class? = null
+    var interfaces: List<Class>
+    var stat = 0
+    var runtimeClass: Instance? = null
 
-import java.util.List;
-import java.util.Objects;
-
-public class Class {
-
-  public final int accessFlags;
-  public final String name;
-  public final String superClassName;
-  public final List<String> interfaceNames;
-  public final List<Method> methods;
-  public final List<Field> fields;
-  public final BootstrapMethods bootstrapMethods;
-  public final ConstantPool constantPool;
-  public final ClassLoader classLoader;
-  public final ClassFile classFile;
-
-  private Class superClass;
-  private List<Class> interfaces;
-  public int stat = 0;
-
-  private Instance runtimeClass;
-
-  public Class(int accessFlags, String name, ClassLoader classLoader, ClassFile classFile) {
-    this.accessFlags = accessFlags;
-    this.name = name;
-    this.classFile = classFile;
-    this.superClassName = "java/lang/Object";
-    this.interfaceNames = new ArrayList<>();
-    this.interfaces = new ArrayList<>();
-    this.bootstrapMethods = null;
-    this.constantPool = null;
-    this.classLoader = classLoader;
-    this.methods = new ArrayList<>();
-    this.fields = new ArrayList<>();
-    this.stat = 2;
-  }
-
-  public Class(int accessFlags, String name, ClassLoader classLoader) {
-    this.accessFlags = accessFlags;
-    this.name = name;
-    this.classFile = null;
-    this.superClassName = null;
-    this.interfaceNames = new ArrayList<>();
-    this.interfaces = new ArrayList<>();
-    this.bootstrapMethods = null;
-    this.constantPool = null;
-    this.classLoader = classLoader;
-    this.methods = new ArrayList<>();
-    this.fields = new ArrayList<>();
-    this.stat = 2;
-  }
-
-  public Class(
-      int accessFlags,
-      String name,
-      String superClassName,
-      List<String> interfaceNames,
-      List<Method> methods,
-      List<Field> fields,
-      BootstrapMethods bootstrapMethods,
-      ConstantPool constantPool,
-      ClassLoader classLoader,
-      ClassFile classFile) {
-    this.accessFlags = accessFlags;
-    this.name = name;
-    this.superClassName = superClassName;
-    this.interfaceNames = interfaceNames;
-    this.classFile = classFile;
-    this.interfaces = new ArrayList<>();
-    this.methods = methods;
-    this.fields = fields;
-    this.bootstrapMethods = bootstrapMethods;
-    this.constantPool = constantPool;
-    this.classLoader = classLoader;
-
-    methods.forEach(it -> it.clazz = this);
-  }
-
-  public Method getMainMethod() {
-    for (Method method : methods) {
-      if (Objects.equals("main", method.name)) {
-        return method;
-      }
-    }
-    return null;
-  }
-
-  public Method getClinitMethod() {
-    return getMethod("<clinit>", "()V");
-  }
-
-  public Method getMethod(String name, String descriptor) {
-    for (Method method : methods) {
-      if (Objects.equals(method.name, name) && Objects.equals(method.descriptor, descriptor)) {
-        return method;
-      }
+    constructor(accessFlags: Int, name: String, classLoader: ClassLoader, classFile: ClassFile?) {
+        this.accessFlags = accessFlags
+        this.name = name
+        this.classFile = classFile
+        superClassName = "java/lang/Object"
+        interfaceNames = ArrayList()
+        interfaces = ArrayList()
+        bootstrapMethods = null
+        constantPool = null
+        this.classLoader = classLoader
+        methods = ArrayList()
+        fields = ArrayList()
+        stat = 2
     }
 
-    for (Class inter : this.interfaces) {
-      Method method = inter.getMethod(name, descriptor);
-      if (method != null) {
-        return method;
-      }
+    constructor(accessFlags: Int, name: String, classLoader: ClassLoader) {
+        this.accessFlags = accessFlags
+        this.name = name
+        classFile = null
+        superClassName = null
+        interfaceNames = ArrayList()
+        interfaces = ArrayList()
+        bootstrapMethods = null
+        constantPool = null
+        this.classLoader = classLoader
+        methods = ArrayList()
+        fields = ArrayList()
+        stat = 2
     }
 
-    if (this.superClass == null) {
-      return null;
+    constructor(
+            accessFlags: Int,
+            name: String,
+            superClassName: String?,
+            interfaceNames: List<String>,
+            methods: List<Method>,
+            fields: List<Field>,
+            bootstrapMethods: BootstrapMethods?,
+            constantPool: ConstantPool?,
+            classLoader: ClassLoader,
+            classFile: ClassFile?) {
+        this.accessFlags = accessFlags
+        this.name = name
+        this.superClassName = superClassName
+        this.interfaceNames = interfaceNames
+        this.classFile = classFile
+        interfaces = ArrayList()
+        this.methods = methods
+        this.fields = fields
+        this.bootstrapMethods = bootstrapMethods
+        this.constantPool = constantPool
+        this.classLoader = classLoader
+        methods.forEach(Consumer { it: Method -> it.clazz = this })
     }
-    return this.superClass.getMethod(name, descriptor);
-  }
 
-  public Method getLambdaMethod(String name) {
-    for (Method method : methods) {
-      if (Objects.equals(method.name, name)) {
-        return method;
-      }
+
+    val clinitMethod: Method?
+        get() = getMethod("<clinit>", "()V")
+
+    /**
+     * 获取类中的main方法
+     * @return Method?
+     */
+    fun getMethod(methodName: String): Method? {
+        return methods.find {
+            it.name == methodName
+        }
     }
-    return null;
-  }
 
-  public Field getField(String fieldName, String fieldDescriptor) {
-    for (Field field : fields) {
-      if (Objects.equals(field.name, fieldName) && Objects
-          .equals(field.descriptor, fieldDescriptor)) {
-        return field;
-      }
+    fun getMethod(name: String, descriptor: String?): Method {
+        val methodCheck = getMethodCheck(name, descriptor)
+
+        if (methodCheck == null) {
+            throw Exception("找不到方法")
+        }
+        return methodCheck
     }
-    return null;
-  }
 
-  public Field getField(String fieldName) {
-    for (Field field : fields) {
-      if (Objects.equals(field.name, fieldName)) {
-        return field;
-      }
+    private fun getMethodCheck(name: String, descriptor: String?): Method? {
+        for (method in methods) {
+            if (method.name == name && method.descriptor == descriptor) {
+                return method
+            }
+        }
+        for (inter in interfaces) {
+            val method = inter.getMethodCheck(name, descriptor)
+            if (method != null) {
+                return method
+            }
+        }
+        return if (superClass == null) {
+            null
+        } else superClass!!.getMethodCheck(name, descriptor)
     }
-    return null;
-  }
 
-  public void setSuperClass(Class superClass) {
-    this.superClass = superClass;
-  }
-
-  public Class getSuperClass() {
-    return this.superClass;
-  }
-
-  public Instance newInstance() {
-    List<Field> newFields = new ArrayList<>();
-    for (Field field : fields) {
-      newFields.add(this.map(field));
+    fun getField(fieldName: String?, fieldDescriptor: String?): Field {
+        return getFieldCheck(fieldName, fieldDescriptor) ?: throw Exception("getField fail")
     }
-    Instance object = new Instance(newFields, this);
-    if (this.superClass != null) {
-      object.setSuperInstance(this.superClass.newInstance());
+
+    private fun getFieldCheck(fieldName: String?, fieldDescriptor: String?): Field? {
+        for (field in fields) {
+            if (field.name == fieldName && field.descriptor == fieldDescriptor) {
+                return field
+            }
+        }
+        return null
     }
-    return object;
-  }
 
-  public LambdaObject newLambdaObject(List<Object> args) {
-    return new LambdaObject(this, args);
-  }
-
-  private Field map(Field source) {
-    if (source.isStatic()) {
-      return source;
+    fun getField(fieldName: String?): Field? {
+        for (field in fields) {
+            if (field.name == fieldName) {
+                return field
+            }
+        }
+        return null
     }
-    final Field field = new Field(source.accessFlags, source.name, source.descriptor);
-    field.init();
-    return field;
-  }
 
-  public boolean getStat() {
-    return this.stat > 0;
-  }
-
-  public void setStat(int level) {
-    this.stat = level;
-  }
-
-  public Class getUnStaticInitSuperClass() {
-    if (!this.getStat()) {
-      return this;
+    fun newInstance(): Instance {
+        val newFields: MutableList<Field> = ArrayList()
+        for (field in fields) {
+            newFields.add(this.map(field))
+        }
+        val `object` = Instance(newFields, this)
+        if (superClass != null) {
+            `object`.setSuperInstance(superClass!!.newInstance())
+        }
+        return `object`
     }
-    if (this.superClass == null) {
-      return null;
+
+    fun newLambdaObject(args: List<Any?>?): LambdaObject {
+        return LambdaObject(this, args)
     }
-    return this.superClass.getUnStaticInitSuperClass();
-  }
 
-  public void setInterfaces(List<Class> interfaces) {
-    this.interfaces = interfaces;
-  }
+    private fun map(source: Field): Field {
+        if (source.isStatic) {
+            return source
+        }
+        val field = Field(source.accessFlags, source.name, source.descriptor)
+        field.init()
+        return field
+    }
 
-  public List<Class> getInterfaces() {
-    return interfaces;
-  }
+    fun judgeStat(): Boolean {
+        return stat > 0
+    }
 
-  @Override
-  public String toString() {
-    return "KClass{" +
-        "name='" + name + '\'' +
-        ", superClassName='" + superClassName + '\'' +
-        ", methods=" + methods.size() +
-        ", fields=" + fields.size() +
-        ", classLoader=" + classLoader.getClass().getName() +
-        ", superClass=" + (superClass == null ? "null" : superClass.name) +
-        ", staticInit=" + stat +
-        '}';
-  }
 
-  public void interfaceInit(Frame frame) {
-    List<Class> interfaces = new ArrayList<>();
-    for (String interfaceName : this.interfaceNames) {
-      Class tmp = Heap.findClass(interfaceName);
-      if (tmp == null) {
-        tmp = frame.method.clazz.classLoader.loadClass(interfaceName);
-      }
-
-      tmp.interfaceInit(frame);
-
-      interfaces.add(tmp);
-      if (!tmp.getStat()) {
-        Method cinit = tmp.getClinitMethod();
-        if (cinit == null) {
-          throw new IllegalStateException();
+    val unStaticInitSuperClass: Class?
+        get() {
+            if (!judgeStat()) {
+                return this
+            }
+            return if (superClass == null) {
+                null
+            } else superClass!!.unStaticInitSuperClass
         }
 
-        tmp.setStat(1);
-        Interpreter.execute(cinit);
-        tmp.setStat(2);
-      }
+    override fun toString(): String {
+        return "KClass{" +
+                "name='" + name + '\'' +
+                ", superClassName='" + superClassName + '\'' +
+                ", methods=" + methods.size +
+                ", fields=" + fields.size +
+                ", classLoader=" + classLoader.javaClass.name +
+                ", superClass=" + (if (superClass == null) "null" else superClass!!.name) +
+                ", staticInit=" + stat +
+                '}'
     }
-    this.setInterfaces(interfaces);
-  }
 
-  public boolean is(String clazz) {
-    if (this.name.equals(clazz)) {
-      return true;
+    fun interfaceInit(frame: Frame) {
+        val interfaces: MutableList<Class> = ArrayList()
+        for (interfaceName in interfaceNames) {
+            var tmp = findClass(interfaceName)
+            if (tmp == null) {
+                tmp = frame.method.clazz.classLoader.loadClass(interfaceName)
+            }
+            tmp.interfaceInit(frame)
+            interfaces.add(tmp)
+            if (!tmp.judgeStat()) {
+                val cinit = tmp.clinitMethod ?: throw IllegalStateException()
+                tmp.stat = 1
+                Interpreter.execute(cinit)
+                tmp.stat = 2
+            }
+        }
+        this.interfaces = interfaces
     }
-    for (String interfaceName : this.interfaceNames) {
-      if (Objects.equals(interfaceName, clazz)) {
-        return true;
-      }
+
+    fun `is`(clazz: String): Boolean {
+        if (name == clazz) {
+            return true
+        }
+        for (interfaceName in interfaceNames) {
+            if (interfaceName == clazz) {
+                return true
+            }
+        }
+        return if (superClass != null) {
+            superClass!!.`is`(clazz)
+        } else false
     }
-    if (this.superClass != null) {
-      return this.superClass.is(clazz);
+
+    val isInterface: Boolean
+        get() = accessFlags and 0x0200 != 0
+    val isPrimitive: Boolean
+        get() {
+            if (name == "java/lang/Character") {
+                return true
+            }
+            println("is primitive ? $name")
+            return false
+        }
+
+    fun getSource(): String? {
+        return classFile!!.sourceFile
     }
-    return false;
-  }
-
-  public boolean isInterface() {
-    return (accessFlags & 0x0200) != 0;
-  }
-
-  public Instance getRuntimeClass() {
-    return runtimeClass;
-  }
-
-  public void setRuntimeClass(Instance runtimeClass) {
-    this.runtimeClass = runtimeClass;
-  }
-
-  public boolean isPrimitive() {
-    if (name.equals("java/lang/Character")) {
-      return true;
-    }
-    System.out.println("is primitive ? " + name);
-    return false;
-  }
-
-  public String getSource() {
-    return classFile.getSourceFile();
-  }
 }

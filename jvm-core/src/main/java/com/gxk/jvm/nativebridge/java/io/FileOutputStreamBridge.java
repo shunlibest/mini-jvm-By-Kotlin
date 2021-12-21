@@ -29,9 +29,9 @@ public abstract class FileOutputStreamBridge {
     Heap.registerMethod("java/io/FileOutputStream_write_(IZ)V", frame -> {
       boolean append = frame.popInt() == 1;
       Integer val = frame.popInt();
-      Instance thisObj = (Instance) frame.popRef();
+      Instance thisObj = frame.popRef();
       Field fd = thisObj.getField("fd", "Ljava/io/FileDescriptor;");
-      Instance fdObj = (Instance) fd.val.getRef();
+      Instance fdObj = fd.val.getRef();
       int realFd = fdObj.getField("fd", "I").val.getInt();
       // out
       if (realFd == 1) {
@@ -61,9 +61,9 @@ public abstract class FileOutputStreamBridge {
         bytes[i - off] = (byte) arg1.ints[i];
       }
 
-      Instance thisObj = (Instance) frame.popRef();
+      Instance thisObj = frame.popRef();
       Field fd = thisObj.getField("fd", "Ljava/io/FileDescriptor;");
-      Instance fdObj = (Instance) fd.val.getRef();
+      Instance fdObj = fd.val.getRef();
       int realFd = fdObj.getField("fd", "I").val.getInt();
       // out
       if (realFd == 1) {

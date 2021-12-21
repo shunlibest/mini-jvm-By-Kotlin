@@ -39,7 +39,7 @@ public class PrintStream extends FilterOutputStream {
     }
   }
 
-  public void write(byte buf[], int off, int len) {
+  public void write(byte[] buf, int off, int len) {
     try {
       out.write(buf, off, len);
     } catch (IOException e) {
@@ -71,7 +71,7 @@ public class PrintStream extends FilterOutputStream {
     write(String.valueOf(d));
   }
 
-  public void print(char s[]) {
+  public void print(char[] s) {
   }
 
   public void print(String s) {
@@ -135,7 +135,7 @@ public class PrintStream extends FilterOutputStream {
     }
   }
 
-  public void println(char x[]) {
+  public void println(char[] x) {
     synchronized (this) {
       print(x);
       newLine();
