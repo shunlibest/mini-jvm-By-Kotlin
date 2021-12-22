@@ -1,611 +1,425 @@
-package com.gxk.jvm.classfile;
+package com.gxk.jvm.classfile
 
-import static com.gxk.jvm.classfile.ConstantPoolInfoEnum.*;
+import kotlin.Throws
+import java.io.IOException
+import com.gxk.jvm.instruction.constants.*
+import com.gxk.jvm.classfile.ConstantInfo
+import com.gxk.jvm.classfile.ConstantPoolInfoEnum
+import com.gxk.jvm.classfile.cp.*
+import com.gxk.jvm.instruction.constants.LdcInst
+import java.lang.IllegalStateException
+import com.gxk.jvm.instruction.constants.LdcWInst
+import com.gxk.jvm.instruction.constants.Ldc2wInst
+import com.gxk.jvm.instruction.Instruction
+import com.gxk.jvm.instruction.comparisons.*
+import com.gxk.jvm.instruction.loads.*
+import com.gxk.jvm.instruction.stores.*
+import com.gxk.jvm.instruction.stack.*
+import com.gxk.jvm.instruction.math.*
+import com.gxk.jvm.instruction.conversions.*
+import com.gxk.jvm.instruction.control.*
+import com.gxk.jvm.instruction.extended.GotoInst
+import java.lang.UnsupportedOperationException
+import java.util.LinkedHashMap
+import com.gxk.jvm.instruction.references.*
+import com.gxk.jvm.instruction.extended.*
+import com.gxk.jvm.util.Utils
 
-import com.gxk.jvm.classfile.cp.ClassCp;
-import com.gxk.jvm.classfile.cp.DoubleCp;
-import com.gxk.jvm.classfile.cp.FloatCp;
-import com.gxk.jvm.classfile.cp.IntegerCp;
-import com.gxk.jvm.classfile.cp.InvokeDynamic;
-import com.gxk.jvm.classfile.cp.LongCp;
-import com.gxk.jvm.classfile.cp.StringCp;
-import com.gxk.jvm.instruction.*;
-import com.gxk.jvm.instruction.comparisons.*;
-import com.gxk.jvm.instruction.constants.*;
-import com.gxk.jvm.instruction.control.*;
-import com.gxk.jvm.instruction.conversions.*;
-import com.gxk.jvm.instruction.extended.*;
-import com.gxk.jvm.instruction.loads.*;
-import com.gxk.jvm.instruction.math.*;
-import com.gxk.jvm.instruction.references.*;
-import com.gxk.jvm.instruction.stack.*;
-import com.gxk.jvm.instruction.stores.*;
-import com.gxk.jvm.util.Utils;
+/**
+ * 参考资料:
+ * JVM指令手册 https://www.jianshu.com/p/0978d7ab7113
+ */
+object InstructionReader {
 
-import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Map;
+    fun read(opCode: Int, stm: MyDataInputStream, constantPool: ConstantPool): Instruction {
+        return when (opCode) {
+            //一、未归类系列A
+            0x0 -> NopInst()        //空指令
+            0x1 -> AconstNullInst() //将null推送至栈顶
+            //二、const系列
+            //该系列命令主要负责把简单的数值类型送到栈顶。该系列命令不带参数。注意只把简单的数值类型送到栈顶时,才使用如下的命令。
+            0x2 -> IConstM1Inst()   //将int型(-1)推送至栈顶
+            0x3 -> IConst0Inst()    //将int型(0)推送至栈顶
+            0x4 -> IConst1Inst()    //将int型(1)推送至栈顶
+            0x5 -> IConst2Inst()    //将int型(2)推送至栈顶
+            0x6 -> IConst3Inst()    //将int型(3)推送至栈顶
+            0x7 -> IConst4Inst()    //将int型(4)推送至栈顶
+            0x8 -> IConst5Inst()    //将int型(5)推送至栈顶
+            0x9 -> Lconst0Inst()    //将long型(0)推送至栈顶
+            0xa -> Lconst1Inst()    //将long型(1)推送至栈顶
+            0xb -> FConst0Inst()    //将float型(0)推送至栈顶
+            0xc -> FConst1Inst()    //将float型(1)推送至栈顶
+            0xd -> FConst2Inst()    //将float型(2)推送至栈顶
+            0xe -> DConst0Inst()    //将double型(0)推送至栈顶
+            0xf -> DConst1Inst()    //将double型(1)推送至栈顶
+            //三、push系列
+            //该系列命令负责把一个整形数字（长度比较小）送到到栈顶。该系列命令有一个参数，用于指定要送到栈顶的数字。
+            //注意该系列命令只能操作一定范围内的整形数值，超出该范围的使用将使用ldc
+            0x10 -> BiPushInst(stm.readByte())  //将单字节的常量值(-128~127)推送至栈顶
+            0x11 -> SiPushInst(stm.readShort()) //将一个短整型常量值(-32768~32767)推送至栈顶
 
-public abstract class InstructionReader {
+            //四、ldc系列
+            //该系列命令负责把数值常量或String常量值从常量池中推送至栈顶。该命令后面需要给一个表示常量在常量池中位置(编号)的参数
+            //注意: 通过new创建的String都是不放在常量池中
+            0x12 -> {
+                val index = stm.readUnsignedByte()
+                val info = constantPool.infos[index - 1]
+                when (info.infoEnum) {
+                    ConstantPoolInfoEnum.CONSTANT_String -> {
+                        val stringIndex = (info as StringCp).stringIndex
+                        val string = Utils.getString(constantPool, stringIndex)
+                        return LdcInst("Ljava/lang/String", string)
+                    }
+                    ConstantPoolInfoEnum.CONSTANT_Integer -> return LdcInst("I", (info as IntegerCp).`val`)
+                    ConstantPoolInfoEnum.CONSTANT_Float -> return LdcInst("F", (info as FloatCp).`val`)
+                    ConstantPoolInfoEnum.CONSTANT_Class -> return LdcInst("L", Utils.getString(constantPool, (info as ClassCp).nameIndex))
+                }
+                throw IllegalStateException()
+            }
+            0x13 -> {
+                val lwIndex = stm.readUnsignedShort()
+                val lwInfo = constantPool.infos[lwIndex - 1]
+                when (lwInfo.infoEnum) {
+                    ConstantPoolInfoEnum.CONSTANT_String -> {
+                        val stringIndex = (lwInfo as StringCp).stringIndex
+                        val string = Utils.getString(constantPool, stringIndex)
+                        return LdcWInst("Ljava/lang/String", string)
+                    }
+                    ConstantPoolInfoEnum.CONSTANT_Integer -> return LdcWInst("I", (lwInfo as IntegerCp).`val`)
+                    ConstantPoolInfoEnum.CONSTANT_Float -> return LdcWInst("F", (lwInfo as FloatCp).`val`)
+                    ConstantPoolInfoEnum.CONSTANT_Class -> return LdcWInst("L", lwInfo)
+                }
+                throw IllegalStateException()
+            }
+            0x14 -> {
+                val ldwIdx = stm.readUnsignedShort()
+                val ldwInfo = constantPool.infos[ldwIdx - 1]
+                when (ldwInfo.infoEnum) {
+                    ConstantPoolInfoEnum.CONSTANT_Double -> return Ldc2wInst(null, (ldwInfo as DoubleCp).`val`)
+                    ConstantPoolInfoEnum.CONSTANT_Long -> return Ldc2wInst((ldwInfo as LongCp).`val`, null)
+                }
+                throw IllegalStateException(ldwInfo.toString())
+            }
 
-  public static Instruction read(int opCode, MyDataInputStream stm, ConstantPool constantPool)
-      throws IOException {
-    switch (opCode) {
-      case 0x0:
-        return new NopInst();
-      case 0x1:
-        return new AconstNullInst();
-      case 0x2:
-        return new IConstM1Inst();
-      case 0x3:
-        return new IConst0Inst();
-      case 0x4:
-        return new IConst1Inst();
-      case 0x5:
-        return new IConst2Inst();
-      case 0x6:
-        return new IConst3Inst();
-      case 0x7:
-        return new IConst4Inst();
-      case 0x8:
-        return new IConst5Inst();
-      case 0x9:
-        return new Lconst0Inst();
-      case 0xa:
-        return new Lconst1Inst();
-      case 0xb:
-        return new FConst0Inst();
-      case 0xc:
-        return new FConst1Inst();
-      case 0xd:
-        return new FConst2Inst();
-      case 0xe:
-        return new DConst0Inst();
-      case 0xf:
-        return new DConst1Inst();
+            //五、load系列
+            //5.1、load系列A
+            //该系列命令负责把本地变量的送到栈顶。这里的本地变量不仅可以是数值类型，还可以是引用类型。
+            0x15 -> ILoadNInst(stm.readUnsignedByte())  //从局部变量表加载一个int类型值到操作数栈中
+            0x16 -> LLoadInst(stm.readUnsignedByte())   //long型
+            0x17 -> FLoadInst(stm.readUnsignedByte())   //float型
+            0x18 -> DLoadInst(stm.readUnsignedByte())   //double型
+            0x19 -> ALoadInst(stm.readUnsignedByte())   //引用类型
+            0x1a -> ILoad0Inst()
+            0x1b -> ILoad1Inst()
+            0x1c -> ILoad2Inst()
+            0x1d -> ILoad3Inst()
+            0x1e -> LLoad0Inst()
+            0x1f -> LLoad1Inst()
+            0x20 -> LLoad2Inst()
+            0x21 -> LLoad3Inst()
+            0x22 -> FLoad0Inst()
+            0x23 -> FLoad1Inst()
+            0x24 -> FLoad2Inst()
+            0x25 -> FLoad3Inst()
+            0x26 -> DLoad0Inst()
+            0x27 -> DLoad1Inst()
+            0x28 -> DLoad2Inst()
+            0x29 -> DLoad3Inst()
+            0x2a -> ALoad0Inst()
+            0x2b -> ALoad1Inst()
+            0x2c -> ALoad2Inst()
+            0x2d -> ALoad3Inst()
+            //5.2、load系列B
+            //该系列命令负责把数组的某项送到栈顶。该命令根据栈里内容来确定对哪个数组的哪项进行操作。
+            0x2e -> IALoadInst()    //
+            0x2f -> LALoadInst()
+            0x30 -> FALoadInst()
+            0x31 -> DALoadInst()
+            0x32 -> AALoadInst()
+            0x33 -> BAloadInst()
+            0x34 -> CAloadInst()
+            0x35 -> SALoadInst()
 
-      case 0x10:
-        return new BiPushInst(stm.readByte());
-      case 0x11:
-        return new SiPushInst(stm.readShort());
-      case 0x12:
-        int index = stm.readUnsignedByte();
-        ConstantInfo info = constantPool.infos[index - 1];
-        switch (info.infoEnum) {
-          case CONSTANT_String:
-            int stringIndex = ((StringCp) info).stringIndex;
-            String string = Utils.getString(constantPool, stringIndex);
-            return new LdcInst("Ljava/lang/String", string);
-          case CONSTANT_Integer:
-            return new LdcInst("I", ((IntegerCp) info).val);
-          case CONSTANT_Float:
-            return new LdcInst("F", ((FloatCp) info).val);
-          case CONSTANT_Class:
-            return new LdcInst("L", Utils.getString(constantPool, ((ClassCp) info).nameIndex));
+            //六、store系列
+            //该系列命令负责把栈顶的值存入本地变量。这里的本地变量不仅可以是数值类型，还可以是引用类型。
+            0x36 -> IStoreNInst(stm.readUnsignedByte())
+            0x37 -> LStoreNInst(stm.readUnsignedByte())
+            0x38 -> FStoreNInst(stm.readUnsignedByte())
+            0x39 -> DStoreNInst(stm.readUnsignedByte())
+            0x3a -> AStoreInst(stm.readUnsignedByte())
+            0x3b -> IStore0Inst()
+            0x3c -> IStore1Inst()
+            0x3d -> IStore2Inst()
+            0x3e -> IStore3Inst()
+            0x3f -> LStore0Inst()
+            0x40 -> LStore1Inst()
+            0x41 -> LStore2Inst()
+            0x42 -> LStore3Inst()
+            0x43 -> FStore0Inst()
+            0x44 -> FStore1Inst()
+            0x45 -> FStore2Inst()
+            0x46 -> FStore3Inst()
+            0x47 -> DStore0Inst()
+            0x48 -> DStore1Inst()
+            0x49 -> DStore2Inst()
+            0x4a -> DStore3Inst()
+            0x4b -> AStore0Inst()
+            0x4c -> AStore1Inst()
+            0x4d -> AStore2Inst()
+            0x4e -> AStore3Inst()
+            0x4f -> IAStoreInst()
+            0x50 -> LAStoreInst()
+            0x51 -> FAStoreInst()
+            0x52 -> DAStoreInst()
+            0x53 -> AAStoreInst()
+            0x54 -> BAStoreInst()
+            0x55 -> CAStoreInst()
+            0x56 -> SAStoreInst()
+
+            //七、pop系列
+            //该系列命令似乎只是简单对栈顶进行操作
+            0x57 -> PopInst()       //将栈顶数值弹出 (数值不能是long或double类型的)
+            0x58 -> Pop2Inst()      //将栈顶的一个（long或double类型的)或两个数值弹出
+            0x59 -> DupInst()
+            0x5a -> DupX1Inst()
+            0x5b -> DupX2Inst()
+            0x5c -> Dup2Inst()
+            0x5d -> Dup2X1Inst()
+            0x5e -> Dup2X2Inst()
+            0x5f -> SwapInst()
+            0x60 -> IAddInst()
+            0x61 -> LAddInst()
+            0x62 -> FAddInst()
+            0x63 -> DAddInst()
+            0x64 -> ISubInst()
+            0x65 -> LSubInst()
+            0x66 -> FSubInst()
+            0x67 -> DSubInst()
+            0x68 -> IMulInst()
+            0x69 -> LMulInst()
+            0x6a -> FMulInst()
+            0x6b -> DMulInst()
+            0x6c -> IDivInst()
+            0x6d -> LDivInst()
+            0x6e -> FDivInst()
+            0x6f -> DDivInst()
+            0x70 -> IRemInst()
+            0x71 -> LRemInst()
+            0x72 -> FRemInst()
+            0x73 -> DRemInst()
+            0x74 -> INegInst()
+            0x75 -> LNegInst()
+            0x76 -> FNegInst()
+            0x77 -> DNegInst()
+            0x78 -> IShlInst()
+            0x79 -> LShlInst()
+            0x7a -> IShrInst()
+            0x7b -> LShrInst()
+            0x7c -> IUShrInst()
+            0x7d -> LUShrInst()
+            0x7e -> IAndInst()
+            0x7f -> LAndInst()
+            0x80 -> IOrInst()
+            0x81 -> LOrInst()
+            0x82 -> IXOrInst()
+            0x83 -> LXOrInst()
+            0x84 -> IIncInst(stm.readUnsignedByte(), stm.readByte().toInt())
+            0x85 -> I2lInst()
+            0x86 -> I2fInst()
+            0x87 -> I2dInst()
+            0x88 ->                 // l2i
+                L2iInst()
+            0x89 ->                 // l2f
+                L2fInst()
+            0x8a ->                 // l2d
+                L2dInst()
+            0x8b -> F2iInst()
+            0x8c -> F2lInst()
+            0x8d -> F2dInst()
+            0x8e -> D2iInst()
+            0x8f -> D2lInst()
+            0x90 -> D2fInst()
+            0x91 -> I2bInst()
+            0x92 -> I2cInst()
+            0x93 -> I2sInst()
+            0x94 -> LCmpInst()
+            0x95 -> FCmpLInst()
+            0x96 -> FCmpGInst()
+            0x97 -> DCmpLInst()
+            0x98 -> DCmpGInst()
+            0x99 -> IfEqInst(stm.readShort().toInt())
+            0x9a -> IfNeInst(stm.readShort().toInt())
+            0x9b -> IfLtInst(stm.readShort().toInt())
+            0x9c -> IfGeInst(stm.readShort().toInt())
+            0x9d -> IfGtInst(stm.readShort().toInt())
+            0x9e -> IfLeInst(stm.readShort().toInt())
+            0x9f -> IfICmpEqInst(stm.readShort().toInt())
+            0xa0 -> IfICmpNeInst(stm.readShort().toInt())
+            0xa1 -> IfICmpLtInst(stm.readShort().toInt())
+            0xa2 -> IfICmpGeInst(stm.readShort().toInt())
+            0xa3 -> IfICmpGtInst(stm.readShort().toInt())
+            0xa4 -> IfICmpLeInst(stm.readShort().toInt())
+            0xa5 -> IfACmpEqInst(stm.readShort().toInt())
+            0xa6 -> IfACmpNeInst(stm.readShort().toInt())
+            0xa7 -> GotoInst(stm.readShort())
+            0xa8 -> throw UnsupportedOperationException("jsr")
+            0xa9 -> throw UnsupportedOperationException("ret")
+            0xaa -> {
+                var offset = 1
+                val padding = stm.readPadding()
+                offset += padding
+                val tsDefault = stm.readInt()
+                val tsLow = stm.readInt()
+                val tsHigh = stm.readInt()
+                offset += 12
+                val tsOffsetByteLength = (tsHigh - tsLow + 1) * 4
+                val map: MutableMap<Int, Int> = LinkedHashMap()
+                var i = tsLow
+                while (i <= tsHigh) {
+                    map[i] = stm.readInt()
+                    i++
+                }
+                offset += tsOffsetByteLength
+                TableSwitchInst(offset, tsDefault, tsLow, tsHigh, map)
+            }
+            0xab -> {
+                var lsOffset = 1
+                val lsPadding = stm.readPadding()
+                lsOffset += lsPadding
+                val lsDef = stm.readInt()
+                lsOffset += 4
+                val lsPairsCnt = stm.readInt()
+                lsOffset += 4
+                val lsPairsLen = lsPairsCnt * 2 * 4
+                val lsMap: MutableMap<Int, Int> = LinkedHashMap()
+                var i = 0
+                while (i < lsPairsCnt) {
+                    lsMap[stm.readInt()] = stm.readInt()
+                    i++
+                }
+                lsOffset += lsPairsLen
+                LookupSwitchInst(lsOffset, lsDef, lsPairsCnt, lsMap)
+            }
+            0xac -> IReturnInst()
+            0xad -> LReturnInst()
+            0xae -> FReturnInst()
+            0xaf -> DReturnInst()
+            0xb0 -> AReturnInst()
+            0xb1 -> ReturnInst()
+            0xb2 -> {
+                val gsIndex = stm.readUnsignedShort()
+                GetStaticInst(
+                        Utils.getClassNameByFieldDefIdx(constantPool, gsIndex),
+                        Utils.getMethodNameByFieldDefIdx(constantPool, gsIndex),
+                        Utils.getMethodTypeByFieldDefIdx(constantPool, gsIndex)
+                )
+            }
+            0xb3 -> {
+                val psIndex = stm.readUnsignedShort()
+                PutStaticInst(
+                        Utils.getClassNameByFieldDefIdx(constantPool, psIndex),
+                        Utils.getMethodNameByFieldDefIdx(constantPool, psIndex),
+                        Utils.getMethodTypeByFieldDefIdx(constantPool, psIndex)
+                )
+            }
+            0xb4 -> {
+                val gfIndex = stm.readUnsignedShort()
+                GetFieldInst(
+                        Utils.getClassNameByFieldDefIdx(constantPool, gfIndex),
+                        Utils.getMethodNameByFieldDefIdx(constantPool, gfIndex),
+                        Utils.getMethodTypeByFieldDefIdx(constantPool, gfIndex)
+                )
+            }
+            0xb5 -> {
+                val pfIndex = stm.readUnsignedShort()
+                PutFieldInst(
+                        Utils.getClassNameByFieldDefIdx(constantPool, pfIndex),
+                        Utils.getMethodNameByFieldDefIdx(constantPool, pfIndex),
+                        Utils.getMethodTypeByFieldDefIdx(constantPool, pfIndex)
+                )
+            }
+            0xb6 -> {
+                val ivIndex = stm.readUnsignedShort()
+                InvokeVirtualInst(
+                        Utils.getClassNameByMethodDefIdx(constantPool, ivIndex),
+                        Utils.getMethodNameByMethodDefIdx(constantPool, ivIndex),
+                        Utils.getMethodTypeByMethodDefIdx(constantPool, ivIndex)
+                )
+            }
+            0xb7 -> {
+                val isIndex = stm.readUnsignedShort()
+                InvokeSpecialInst(
+                        Utils.getClassNameByMethodDefIdx(constantPool, isIndex),
+                        Utils.getMethodNameByMethodDefIdx(constantPool, isIndex),
+                        Utils.getMethodTypeByMethodDefIdx(constantPool, isIndex)
+                )
+            }
+            0xb8 -> {
+                val mdIdx = stm.readUnsignedShort()
+                InvokeStaticInst(
+                        Utils.getClassNameByMethodDefIdx(constantPool, mdIdx),
+                        Utils.getMethodNameByMethodDefIdx(constantPool, mdIdx),
+                        Utils.getMethodTypeByMethodDefIdx(constantPool, mdIdx)
+                )
+            }
+            0xb9 -> {
+                val iiIdx = stm.readUnsignedShort()
+                InvokeInterfaceInst(
+                        Utils.getClassNameByIMethodDefIdx(constantPool, iiIdx),
+                        Utils.getMethodNameByIMethodDefIdx(constantPool, iiIdx),
+                        Utils.getMethodTypeByIMethodDefIdx(constantPool, iiIdx),
+                        stm.readUnsignedByte(),
+                        stm.readUnsignedByte()
+                )
+            }
+            0xba -> {
+                val idsrIdx = stm.readUnsignedShort()
+                val idInfo = constantPool.infos[idsrIdx - 1]
+                val invokeDynamic = idInfo as InvokeDynamic
+                val bmaIdx = invokeDynamic.bootstrapMethodAttrIndex
+                val idName = Utils.getNameByNameAndTypeIdx(constantPool, invokeDynamic.nameAndTypeIndex)
+                val idType = Utils.getTypeByNameAndTypeIdx(constantPool, invokeDynamic.nameAndTypeIndex)
+                stm.readUnsignedByte()
+                stm.readUnsignedByte()
+                InvokeDynamicInst(idName, idType, bmaIdx)
+            }
+            0xbb -> NewInst(Utils.getClassName(constantPool, stm.readUnsignedShort()))
+            0xbc -> NewArrayInst(stm.readUnsignedByte())
+            0xbd -> ANewArrayInst(Utils.getClassName(constantPool, stm.readUnsignedShort()))
+            0xbe -> ArrayLengthInst()
+            0xbf -> AThrowInst()
+            0xc0 -> CheckcastInst(Utils.getClassName(constantPool, stm.readUnsignedShort()))
+            0xc1 -> {
+                val ioClazzIdx = stm.readUnsignedShort()
+                InstanceofInst(Utils.getClassName(constantPool, ioClazzIdx))
+            }
+            0xc2 -> MonitorEnterInst()
+            0xc3 -> MonitorExitInst()
+            0xc4 -> {
+                val wideOpcode = stm.readUnsignedByte()
+                when (wideOpcode) {
+                    0x84 -> return WideInst(6, IIncInst(stm.readUnsignedShort(), stm.readShort().toInt()))
+                    0x15 -> return WideInst(4, ILoadNInst(stm.readUnsignedShort()))
+                    0x17 -> return WideInst(4, FLoadInst(stm.readUnsignedShort()))
+                    0x19 -> return WideInst(4, ALoadInst(stm.readUnsignedShort()))
+                    0x16 -> return WideInst(4, LLoadInst(stm.readUnsignedShort()))
+                    0x18 -> return WideInst(4, DLoadInst(stm.readUnsignedShort()))
+                    0x36 -> return WideInst(4, IStoreNInst(stm.readUnsignedShort()))
+                    0x38 -> return WideInst(4, FStoreNInst(stm.readUnsignedShort()))
+                    0x3a -> return WideInst(4, AStoreInst(stm.readUnsignedShort()))
+                    0x37 -> return WideInst(4, LStoreNInst(stm.readUnsignedShort()))
+                    0x39 -> return WideInst(4, DStoreNInst(stm.readUnsignedShort()))
+                    0xa9 -> throw UnsupportedOperationException()
+                }
+                throw UnsupportedOperationException("wide op $wideOpcode")
+            }
+            0xc5 -> MultiANewArrayInst(stm.readUnsignedShort(), stm.readUnsignedByte())
+            0xc6 -> IfNullInst(stm.readShort().toInt())
+            0xc7 -> IfNonNullInst(stm.readShort().toInt())
+            0xc8 ->                 // goto_w
+                GotoWInst(stm.readInt())
+            0xc9 -> throw UnsupportedOperationException()
+            else -> null
         }
-        throw new IllegalStateException();
-      case 0x13:
-        int lwIndex = stm.readUnsignedShort();
-        ConstantInfo lwInfo = constantPool.infos[lwIndex - 1];
-        switch (lwInfo.infoEnum) {
-          case CONSTANT_String:
-            int stringIndex = ((StringCp) lwInfo).stringIndex;
-            String string = Utils.getString(constantPool, stringIndex);
-            return new LdcWInst("Ljava/lang/String", string);
-          case CONSTANT_Integer:
-            return new LdcWInst("I", ((IntegerCp) lwInfo).val);
-          case CONSTANT_Float:
-            return new LdcWInst("F", ((FloatCp) lwInfo).val);
-          case CONSTANT_Class:
-            return new LdcWInst("L", lwInfo);
-        }
-        throw new IllegalStateException();
-      case 0x14:
-        int ldwIdx = stm.readUnsignedShort();
-        ConstantInfo ldwInfo = constantPool.infos[ldwIdx - 1];
-        switch (ldwInfo.infoEnum) {
-          case CONSTANT_Double:
-            return new Ldc2wInst(null, ((DoubleCp) ldwInfo).val);
-          case CONSTANT_Long:
-            return new Ldc2wInst(((LongCp) ldwInfo).val, null);
-        }
-        throw new IllegalStateException(ldwInfo.toString());
-      case 0x15:
-        return new ILoadNInst(stm.readUnsignedByte());
-      case 0x16:
-        return new LLoadInst(stm.readUnsignedByte());
-      case 0x17:
-        return new FLoadInst(stm.readUnsignedByte());
-      case 0x18:
-        return new DLoadInst(stm.readUnsignedByte());
-      case 0x19:
-        return new ALoadInst(stm.readUnsignedByte());
-      case 0x1a:
-        return new ILoad0Inst();
-      case 0x1b:
-        return new ILoad1Inst();
-      case 0x1c:
-        return new ILoad2Inst();
-      case 0x1d:
-        return new ILoad3Inst();
-      case 0x1e:
-        return new LLoad0Inst();
-      case 0x1f:
-        return new LLoad1Inst();
-
-      case 0x20:
-        return new LLoad2Inst();
-      case 0x21:
-        return new LLoad3Inst();
-      case 0x22:
-        return new FLoad0Inst();
-      case 0x23:
-        return new FLoad1Inst();
-      case 0x24:
-        return new FLoad2Inst();
-      case 0x25:
-        return new FLoad3Inst();
-      case 0x26:
-        return new DLoad0Inst();
-      case 0x27:
-        return new DLoad1Inst();
-      case 0x28:
-        return new DLoad2Inst();
-      case 0x29:
-        return new DLoad3Inst();
-      case 0x2a:
-        return new ALoad0Inst();
-      case 0x2b:
-        return new ALoad1Inst();
-      case 0x2c:
-        return new ALoad2Inst();
-      case 0x2d:
-        return new ALoad3Inst();
-      case 0x2e:
-        return new IALoadInst();
-      case 0x2f:
-        return new LALoadInst();
-
-      case 0x30:
-        return new FALoadInst();
-      case 0x31:
-        return new DALoadInst();
-      case 0x32:
-        return new AALoadInst();
-      case 0x33:
-        return new BAloadInst();
-      case 0x34:
-        return new CAloadInst();
-      case 0x35:
-        return new SALoadInst();
-      case 0x36:
-        return new IStoreNInst(stm.readUnsignedByte());
-      case 0x37:
-        return new LStoreNInst(stm.readUnsignedByte());
-      case 0x38:
-        return new FStoreNInst(stm.readUnsignedByte());
-      case 0x39:
-        return new DStoreNInst(stm.readUnsignedByte());
-      case 0x3a:
-        return new AStoreInst(stm.readUnsignedByte());
-      case 0x3b:
-        return new IStore0Inst();
-      case 0x3c:
-        return new IStore1Inst();
-      case 0x3d:
-        return new IStore2Inst();
-      case 0x3e:
-        return new IStore3Inst();
-      case 0x3f:
-        return new LStore0Inst();
-
-      case 0x40:
-        return new LStore1Inst();
-      case 0x41:
-        return new LStore2Inst();
-      case 0x42:
-        return new LStore3Inst();
-      case 0x43:
-        return new FStore0Inst();
-      case 0x44:
-        return new FStore1Inst();
-      case 0x45:
-        return new FStore2Inst();
-      case 0x46:
-        return new FStore3Inst();
-      case 0x47:
-        return new DStore0Inst();
-      case 0x48:
-        return new DStore1Inst();
-      case 0x49:
-        return new DStore2Inst();
-      case 0x4a:
-        return new DStore3Inst();
-      case 0x4b:
-        return new AStore0Inst();
-      case 0x4c:
-        return new AStore1Inst();
-      case 0x4d:
-        return new AStore2Inst();
-      case 0x4e:
-        return new AStore3Inst();
-      case 0x4f:
-        return new IAStoreInst();
-
-      case 0x50:
-        return new LAStoreInst();
-      case 0x51:
-        return new FAStoreInst();
-      case 0x52:
-        return new DAStoreInst();
-      case 0x53:
-        return new AAStoreInst();
-      case 0x54:
-        return new BAStoreInst();
-      case 0x55:
-        return new CAStoreInst();
-      case 0x56:
-        return new SAStoreInst();
-      case 0x57:
-        return new PopInst();
-      case 0x58:
-        return new Pop2Inst();
-      case 0x59:
-        return new DupInst();
-      case 0x5a:
-        return new DupX1Inst();
-      case 0x5b:
-        return new DupX2Inst();
-      case 0x5c:
-        return new Dup2Inst();
-      case 0x5d:
-        return new Dup2X1Inst();
-      case 0x5e:
-        return new Dup2X2Inst();
-      case 0x5f:
-        return new SwapInst();
-
-      case 0x60:
-        return new IAddInst();
-      case 0x61:
-        return new LAddInst();
-      case 0x62:
-        return new FAddInst();
-      case 0x63:
-        return new DAddInst();
-      case 0x64:
-        return new ISubInst();
-      case 0x65:
-        return new LSubInst();
-      case 0x66:
-        return new FSubInst();
-      case 0x67:
-        return new DSubInst();
-      case 0x68:
-        return new IMulInst();
-      case 0x69:
-        return new LMulInst();
-      case 0x6a:
-        return new FMulInst();
-      case 0x6b:
-        return new DMulInst();
-      case 0x6c:
-        return new IDivInst();
-      case 0x6d:
-        return new LDivInst();
-      case 0x6e:
-        return new FDivInst();
-      case 0x6f:
-        return new DDivInst();
-
-      case 0x70:
-        return new IRemInst();
-      case 0x71:
-        return new LRemInst();
-      case 0x72:
-        return new FRemInst();
-      case 0x73:
-        return new DRemInst();
-      case 0x74:
-        return new INegInst();
-      case 0x75:
-        return new LNegInst();
-      case 0x76:
-        return new FNegInst();
-      case 0x77:
-        return new DNegInst();
-      case 0x78:
-        return new IShlInst();
-      case 0x79:
-        return new LShlInst();
-      case 0x7a:
-        return new IShrInst();
-      case 0x7b:
-        return new LShrInst();
-      case 0x7c:
-        return new IUShrInst();
-      case 0x7d:
-        return new LUShrInst();
-      case 0x7e:
-        return new IAndInst();
-      case 0x7f:
-        return new LAndInst();
-
-      case 0x80:
-        return new IOrInst();
-      case 0x81:
-        return new LOrInst();
-      case 0x82:
-        return new IXOrInst();
-      case 0x83:
-        return new LXOrInst();
-      case 0x84:
-        return new IIncInst(stm.readUnsignedByte(), stm.readByte());
-      case 0x85:
-        return new I2lInst();
-      case 0x86:
-        return new I2fInst();
-      case 0x87:
-        return new I2dInst();
-      case 0x88:
-        // l2i
-        return new L2iInst();
-      case 0x89:
-        // l2f
-        return new L2fInst();
-      case 0x8a:
-        // l2d
-        return new L2dInst();
-      case 0x8b:
-        return new F2iInst();
-      case 0x8c:
-        return new F2lInst();
-      case 0x8d:
-        return new F2dInst();
-      case 0x8e:
-        return new D2iInst();
-      case 0x8f:
-        return new D2lInst();
-
-      case 0x90:
-        return new D2fInst();
-      case 0x91:
-        return new I2bInst();
-      case 0x92:
-        return new I2cInst();
-      case 0x93:
-        return new I2sInst();
-      case 0x94:
-        return new LCmpInst();
-      case 0x95:
-        return new FCmpLInst();
-      case 0x96:
-        return new FCmpGInst();
-      case 0x97:
-        return new DCmpLInst();
-      case 0x98:
-        return new DCmpGInst();
-      case 0x99:
-        return new IfEqInst(stm.readShort());
-      case 0x9a:
-        return new IfNeInst(stm.readShort());
-      case 0x9b:
-        return new IfLtInst(stm.readShort());
-      case 0x9c:
-        return new IfGeInst(stm.readShort());
-      case 0x9d:
-        return new IfGtInst(stm.readShort());
-      case 0x9e:
-        return new IfLeInst(stm.readShort());
-      case 0x9f:
-        return new IfICmpEqInst(stm.readShort());
-
-      case 0xa0:
-        return new IfICmpNeInst(stm.readShort());
-      case 0xa1:
-        return new IfICmpLtInst(stm.readShort());
-      case 0xa2:
-        return new IfICmpGeInst(stm.readShort());
-      case 0xa3:
-        return new IfICmpGtInst(stm.readShort());
-      case 0xa4:
-        return new IfICmpLeInst(stm.readShort());
-      case 0xa5:
-        return new IfACmpEqInst(stm.readShort());
-      case 0xa6:
-        return new IfACmpNeInst(stm.readShort());
-      case 0xa7:
-        return new GotoInst(stm.readShort());
-      case 0xa8:
-        // jsr, 1.6 以前使用, 忽略
-        throw new UnsupportedOperationException("jsr");
-      case 0xa9:
-        // ret, 1.6 以前使用, 忽略
-        throw new UnsupportedOperationException("ret");
-      case 0xaa:
-        int offset = 1;
-
-        int padding = stm.readPadding();
-        offset += padding;
-
-        int tsDefault = stm.readInt();
-        int tsLow = stm.readInt();
-        int tsHigh = stm.readInt();
-        offset += 12;
-
-        int tsOffsetByteLength = (tsHigh - tsLow + 1) * 4;
-        Map<Integer, Integer> map = new LinkedHashMap<>();
-        for (int i = tsLow; i <= tsHigh; i++) {
-          map.put(i, stm.readInt());
-        }
-        offset += tsOffsetByteLength;
-
-        return new TableSwitchInst(offset, tsDefault, tsLow, tsHigh, map);
-      case 0xab:
-        int lsOffset = 1;
-        int lsPadding = stm.readPadding();
-        lsOffset += lsPadding;
-
-        int lsDef = stm.readInt();
-        lsOffset += 4;
-        int lsPairsCnt = stm.readInt();
-        lsOffset += 4;
-
-        int lsPairsLen = lsPairsCnt * 2 * 4;
-        Map<Integer, Integer> lsMap = new LinkedHashMap<>();
-        for (int i = 0; i < lsPairsCnt; i++) {
-          lsMap.put(stm.readInt(), stm.readInt());
-        }
-
-        lsOffset += lsPairsLen;
-        return new LookupSwitchInst(lsOffset, lsDef, lsPairsCnt, lsMap);
-      case 0xac:
-        return new IReturnInst();
-      case 0xad:
-        return new LReturnInst();
-      case 0xae:
-        return new FReturnInst();
-      case 0xaf:
-        return new DReturnInst();
-
-      case 0xb0:
-        return new AReturnInst();
-      case 0xb1:
-        return new ReturnInst();
-      case 0xb2:
-        int gsIndex = stm.readUnsignedShort();
-        return new GetStaticInst(
-            Utils.getClassNameByFieldDefIdx(constantPool, gsIndex),
-            Utils.getMethodNameByFieldDefIdx(constantPool, gsIndex),
-            Utils.getMethodTypeByFieldDefIdx(constantPool, gsIndex)
-        );
-      case 0xb3:
-        int psIndex = stm.readUnsignedShort();
-        return new PutStaticInst(
-            Utils.getClassNameByFieldDefIdx(constantPool, psIndex),
-            Utils.getMethodNameByFieldDefIdx(constantPool, psIndex),
-            Utils.getMethodTypeByFieldDefIdx(constantPool, psIndex)
-        );
-      case 0xb4:
-        int gfIndex = stm.readUnsignedShort();
-        return new GetFieldInst(
-            Utils.getClassNameByFieldDefIdx(constantPool, gfIndex),
-            Utils.getMethodNameByFieldDefIdx(constantPool, gfIndex),
-            Utils.getMethodTypeByFieldDefIdx(constantPool, gfIndex)
-        );
-      case 0xb5:
-        int pfIndex = stm.readUnsignedShort();
-        return new PutFieldInst(
-            Utils.getClassNameByFieldDefIdx(constantPool, pfIndex),
-            Utils.getMethodNameByFieldDefIdx(constantPool, pfIndex),
-            Utils.getMethodTypeByFieldDefIdx(constantPool, pfIndex)
-        );
-      case 0xb6:
-        int ivIndex = stm.readUnsignedShort();
-        return new InvokeVirtualInst(
-            Utils.getClassNameByMethodDefIdx(constantPool, ivIndex),
-            Utils.getMethodNameByMethodDefIdx(constantPool, ivIndex),
-            Utils.getMethodTypeByMethodDefIdx(constantPool, ivIndex)
-        );
-      case 0xb7:
-        int isIndex = stm.readUnsignedShort();
-        return new InvokeSpecialInst(
-            Utils.getClassNameByMethodDefIdx(constantPool, isIndex),
-            Utils.getMethodNameByMethodDefIdx(constantPool, isIndex),
-            Utils.getMethodTypeByMethodDefIdx(constantPool, isIndex)
-        );
-      case 0xb8:
-        int mdIdx = stm.readUnsignedShort();
-        return new InvokeStaticInst(
-            Utils.getClassNameByMethodDefIdx(constantPool, mdIdx),
-            Utils.getMethodNameByMethodDefIdx(constantPool, mdIdx),
-            Utils.getMethodTypeByMethodDefIdx(constantPool, mdIdx)
-        );
-      case 0xb9:
-        int iiIdx = stm.readUnsignedShort();
-        return new InvokeInterfaceInst(
-            Utils.getClassNameByIMethodDefIdx(constantPool, iiIdx),
-            Utils.getMethodNameByIMethodDefIdx(constantPool, iiIdx),
-            Utils.getMethodTypeByIMethodDefIdx(constantPool, iiIdx),
-            stm.readUnsignedByte(),
-            stm.readUnsignedByte()
-        );
-      case 0xba:
-        int idsrIdx = stm.readUnsignedShort();
-        ConstantInfo idInfo = constantPool.infos[idsrIdx - 1];
-        InvokeDynamic invokeDynamic = (InvokeDynamic) idInfo;
-        int bmaIdx = invokeDynamic.bootstrapMethodAttrIndex;
-        String idName = Utils.getNameByNameAndTypeIdx(constantPool, invokeDynamic.nameAndTypeIndex);
-        String idType = Utils.getTypeByNameAndTypeIdx(constantPool, invokeDynamic.nameAndTypeIndex);
-
-        stm.readUnsignedByte();
-        stm.readUnsignedByte();
-        return new InvokeDynamicInst(idName, idType, bmaIdx);
-      case 0xbb:
-        return new NewInst(Utils.getClassName(constantPool, stm.readUnsignedShort()));
-      case 0xbc:
-        return new NewArrayInst(stm.readUnsignedByte());
-      case 0xbd:
-        return new ANewArrayInst(Utils.getClassName(constantPool, stm.readUnsignedShort()));
-      case 0xbe:
-        return new ArrayLengthInst();
-      case 0xbf:
-        return new AThrowInst();
-
-      case 0xc0:
-        return new CheckcastInst(Utils.getClassName(constantPool, stm.readUnsignedShort()));
-      case 0xc1:
-        int ioClazzIdx = stm.readUnsignedShort();
-        return new InstanceofInst(Utils.getClassName(constantPool, ioClazzIdx));
-      case 0xc2:
-        return new MonitorEnterInst();
-      case 0xc3:
-        return new MonitorExitInst();
-      case 0xc4:
-        int wideOpcode = stm.readUnsignedByte();
-        switch (wideOpcode) {
-          case 0x84:
-            return new WideInst(6, new IIncInst(stm.readUnsignedShort(), stm.readShort()));
-          case 0x15:
-            return new WideInst(4, new ILoadNInst(stm.readUnsignedShort()));
-          case 0x17:
-            return new WideInst(4, new FLoadInst(stm.readUnsignedShort()));
-          case 0x19:
-            return new WideInst(4, new ALoadInst(stm.readUnsignedShort()));
-          case 0x16:
-            return new WideInst(4, new LLoadInst(stm.readUnsignedShort()));
-          case 0x18:
-            return new WideInst(4, new DLoadInst(stm.readUnsignedShort()));
-          case 0x36:
-            return new WideInst(4, new IStoreNInst(stm.readUnsignedShort()));
-          case 0x38:
-            return new WideInst(4, new FStoreNInst(stm.readUnsignedShort()));
-          case 0x3a:
-            return new WideInst(4, new AStoreInst(stm.readUnsignedShort()));
-          case 0x37:
-            return new WideInst(4, new LStoreNInst(stm.readUnsignedShort()));
-          case 0x39:
-            return new WideInst(4, new DStoreNInst(stm.readUnsignedShort()));
-          case 0xa9:
-            // ret, ignore
-            throw new UnsupportedOperationException();
-        }
-        throw new UnsupportedOperationException("wide op " + wideOpcode);
-      case 0xc5:
-        return new MultiANewArrayInst(stm.readUnsignedShort(), stm.readUnsignedByte());
-      case 0xc6:
-        return new IfNullInst(stm.readShort());
-      case 0xc7:
-        return new IfNonNullInst(stm.readShort());
-      case 0xc8:
-        // goto_w
-        return new GotoWInst(stm.readInt());
-      case 0xc9:
-        // jsr_w, 同 jsr, 忽略
-        throw new UnsupportedOperationException();
-      default:
-        return null;
-//        throw new UnsupportedOperationException("unknown op code");
     }
-  }
 }

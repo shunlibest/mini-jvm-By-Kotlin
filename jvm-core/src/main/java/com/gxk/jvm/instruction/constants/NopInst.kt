@@ -1,21 +1,19 @@
-package com.gxk.jvm.instruction.constants;
+package com.gxk.jvm.instruction.constants
 
-import com.gxk.jvm.instruction.Instruction;
+import com.gxk.jvm.instruction.Instruction
+import com.gxk.jvm.rtda.Frame
 
-
-import com.gxk.jvm.rtda.Frame;
 
 /**
- * <p><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.nop">nop</a></p>
- * <p>Do nothing.</p>
- * <p>Operand Stack</p>
- * <pre>
- * No change
- * </pre>
+ * 格式       nop
+ * 结构       nop=0 (0x0)
+ * 操作数栈   无变化
+ * 描述       什么事情都不做
  */
-public class NopInst implements Instruction {
+class NopInst : Instruction {
 
-  @Override
-  public void execute(Frame frame) {
-  }
+    override fun execute(frame: Frame) {
+
+
+    }
 }

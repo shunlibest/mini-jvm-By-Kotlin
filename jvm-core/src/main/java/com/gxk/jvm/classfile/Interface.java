@@ -1,5 +1,10 @@
 package com.gxk.jvm.classfile;
 
+
+/**
+ * 手打<br>
+ * 阿达
+ */
 public class Interface {
   public final String name;
 
