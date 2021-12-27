@@ -16,7 +16,13 @@ object Heap {
     //存储加载后的class方法
     private val STRING_K_CLASS_MAP: MutableMap<String, Class> = HashMap()
 
-    fun registerMethod(key: String, method: NativeMethod) {
+    /**
+     * 注册本地方法
+     *
+     * @param key 方法名称, 包括类名
+     * @param method 执行方法
+     */
+    fun registerNativeMethod(key: String, method: NativeMethod) {
         check(!NATIVE_METHOD_MAP.containsKey(key))
         NATIVE_METHOD_MAP[key] = method
     }
@@ -36,8 +42,8 @@ object Heap {
     fun registerClass(name: String, clazz: Class) {
         if (EnvHolder.verboseClass) {
             var source = clazz.classLoader.name
-            if (clazz.classFile != null && clazz.classFile.source != null) {
-                source = clazz.classFile.source
+            if (clazz.classFile?.source != null) {
+                source = clazz.classFile.source!!
             }
             Logger.clazz("[Loaded $name from $source]")
         }

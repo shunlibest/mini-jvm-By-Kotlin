@@ -1,15 +1,16 @@
-package com.gxk.jvm.nativebridge.java.nio.charset;
+package com.gxk.jvm.nativebridge.java.nio.charset
 
-import com.gxk.jvm.rtda.heap.Heap;
+import com.gxk.jvm.rtda.Frame
+import com.gxk.jvm.rtda.heap.Heap.registerNativeMethod
 
-public abstract class CharsetBridge {
 
-  public static void registerNative0() {
-    // static
-    Heap.registerMethod("java/nio/charset/Charset_atBugLevel_(Ljava/lang/String;)Z", frame -> {
-      frame.popRef();
-      // false
-      frame.pushInt(0);
-    });
-  }
+object CharsetBridge {
+    fun registerNative0() {
+        // static
+        registerNativeMethod("java/nio/charset/Charset_atBugLevel_(Ljava/lang/String;)Z") { frame: Frame ->
+            frame.popRef()
+            // false
+            frame.pushInt(0)
+        }
+    }
 }

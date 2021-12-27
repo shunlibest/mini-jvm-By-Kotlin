@@ -10,6 +10,7 @@ import java.util.ArrayList
 
 /**
  * 类加载器
+ * <N,Ld> 表示一个类或接口
  */
 public class ClassLoader(val name: String, private val entry: Entry) {
     fun loadPrimitiveClass(name: String) {
@@ -120,8 +121,9 @@ public class ClassLoader(val name: String, private val entry: Entry) {
 
     fun map(cfMethodInfo: MethodInfo): Method {
         val code = cfMethodInfo.codeAttribute
-                ?: return Method(cfMethodInfo.accessFlags, cfMethodInfo.name, cfMethodInfo.descriptor.descriptor, 0, 0,
-                        null!!, null!!, cfMethodInfo.lineNumber)
+
+//                ?: return Method(cfMethodInfo.accessFlags, cfMethodInfo.name, cfMethodInfo.descriptor.descriptor, 0, 0,
+//                        null!!, null!!, cfMethodInfo.lineNumber)
         return Method(cfMethodInfo.accessFlags, cfMethodInfo.name, cfMethodInfo.descriptor.descriptor,
                 code.maxStacks, code.maxLocals, code.getInstructions(), code.exceptionTable,
                 cfMethodInfo.lineNumber)

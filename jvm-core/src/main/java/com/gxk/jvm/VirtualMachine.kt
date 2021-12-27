@@ -124,9 +124,10 @@ public class VirtualMachine {
             outField.`val` = UnionSlot.of(psObj)
         }
 
+        //加载方法库
         fun loadLibrary() {
-            ObjectBridge.registerNatives0()
-            ClassBridge.registerNatives0()
+            ObjectBridge.registerNatives0()         //Object里的方法
+            ClassBridge.registerNatives0()          //
             SystemBridge.registerNatives0()
             FileOutputStreamBridge.registerNatives0()
             FileDescriptorBridge.registerNative0()

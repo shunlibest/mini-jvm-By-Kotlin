@@ -1,14 +1,10 @@
-package com.gxk.jvm.nativebridge.java.util.concurrent;
+package com.gxk.jvm.nativebridge.java.util.concurrent
 
-import com.gxk.jvm.rtda.heap.Heap;
-
-public abstract class AtomicLongBridge {
-
-  public static void registerNatives0() {
-    Heap.registerMethod("java/util/concurrent/atomic/AtomicLong_VMSupportsCS8_()Z", frame -> {
-      frame.pushInt(0);
-    });
-    Heap.registerMethod("java/util/concurrent/atomic/AtomicLong_<clinit>_()V", frame -> {
-    });
-  }
+import com.gxk.jvm.rtda.Frame
+import com.gxk.jvm.rtda.heap.Heap.registerNativeMethod
+object AtomicLongBridge {
+    fun registerNatives0() {
+        registerNativeMethod("java/util/concurrent/atomic/AtomicLong_VMSupportsCS8_()Z") { frame: Frame -> frame.pushInt(0) }
+        registerNativeMethod("java/util/concurrent/atomic/AtomicLong_<clinit>_()V") { frame: Frame? -> }
+    }
 }

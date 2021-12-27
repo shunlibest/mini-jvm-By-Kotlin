@@ -1,237 +1,178 @@
-package com.gxk.jvm.nativebridge.java.lang;
+package com.gxk.jvm.nativebridge.java.lang
 
-import com.gxk.jvm.interpret.Interpreter;
-import com.gxk.jvm.rtda.Frame;
-import com.gxk.jvm.rtda.UnionSlot;
-import com.gxk.jvm.rtda.heap.Class;
-import com.gxk.jvm.rtda.heap.Field;
-import com.gxk.jvm.rtda.heap.Heap;
-import com.gxk.jvm.rtda.heap.Instance;
-import com.gxk.jvm.rtda.heap.InstanceArray;
-import com.gxk.jvm.rtda.heap.Method;
-import com.gxk.jvm.rtda.heap.PrimitiveArray;
-import com.gxk.jvm.util.Utils;
-import java.util.List;
+import com.gxk.jvm.interpret.Interpreter
+import com.gxk.jvm.rtda.heap.Heap.registerNativeMethod
+import com.gxk.jvm.rtda.heap.Heap.findClass
+import com.gxk.jvm.rtda.Frame
+import com.gxk.jvm.rtda.heap.Heap.registerClass
+import com.gxk.jvm.rtda.UnionSlot
+import com.gxk.jvm.rtda.heap.*
+import com.gxk.jvm.util.Utils
+import java.lang.IllegalStateException
+import java.lang.UnsupportedOperationException
 
-public abstract class ClassBridge {
-
-  public static void registerNatives0() {
-    Heap.registerMethod("java/lang/Class_registerNatives_()V", (frame) -> {
-    });
-    Heap.registerMethod("java/lang/Class_getName0_()Ljava/lang/String;", frame -> {
-      Instance obj = frame.popRef();
-      String name = obj.getMetaClass().name;
-      Class strClazz = Heap.findClass("java/lang/String");
-      Instance nameObj = strClazz.newInstance();
-
-      char[] chars = Utils.replace(name, '/', '.').toCharArray();
-      final PrimitiveArray array = PrimitiveArray.charArray(chars.length);
-      for (int i = 0; i < chars.length; i++) {
-        array.ints[i] = chars[i];
-      }
-
-      nameObj.setField("value", "[C", UnionSlot.of(array));
-      frame.pushRef(nameObj);
-    });
-    Heap.registerMethod(
-        "java/lang/Class_forName0_(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;",
-        frame -> {
-          frame.popRef();
-          frame.popRef();
-          Integer init = frame.popInt();
-          Instance name = frame.popRef();
-          String clsName = Utils.replace(Utils.obj2Str(name), '.', '/');
-          Class clazz = Heap.findClass(clsName);
-          if (clazz == null) {
-            clazz = frame.method.clazz.classLoader.loadClass(clsName);
-          }
-          if (clazz == null) {
-            throw new IllegalStateException("class not found " + clsName);
-          }
-
-          frame.pushRef(clazz.getRuntimeClass());
-
-          if (init == 1 && !clazz.getStat()) {
-            Method cinit = clazz.getClinitMethod();
-            if (cinit == null) {
-              throw new IllegalStateException();
+object ClassBridge {
+    fun registerNatives0() {
+        registerNativeMethod("java/lang/Class_registerNatives_()V") { frame: Frame? -> }
+        registerNativeMethod("java/lang/Class_getName0_()Ljava/lang/String;") { frame: Frame ->
+            val obj = frame.popRef()
+            val name = obj.metaClass.name
+            val strClazz = findClass("java/lang/String")
+            val nameObj = strClazz!!.newInstance()
+            val chars = Utils.replace(name, '/', '.').toCharArray()
+            val array = PrimitiveArray.charArray(chars.size)
+            for (i in chars.indices) {
+                array.ints[i] = chars[i].toInt()
             }
-
-            clazz.setStat(1);
-            Interpreter.execute(cinit);
-            clazz.setStat(2);
-          }
-        });
-
-    Heap.registerMethod("java/lang/Class_isInstance_(Ljava/lang/Object;)Z", frame -> {
-      throw new UnsupportedOperationException();
-    });
-    Heap.registerMethod("java/lang/Class_isAssignableFrom_(Ljava/lang/Class;)Z", frame -> {
-      throw new UnsupportedOperationException();
-    });
-    Heap.registerMethod("java/lang/Class_isInterface_()Z", frame -> {
-      Class cls = frame.popRef().getMetaClass();
-      frame.pushInt(cls.isInterface() ? 1 : 0);
-    });
-    Heap.registerMethod("java/lang/Class_isArray_()Z", frame -> {
-      Class metaClass = frame.popRef().getMetaClass();
-      boolean isArray = metaClass.name.startsWith("[");
-      frame.pushInt(isArray ? 1 : 0);
-    });
-    Heap.registerMethod("java/lang/Class_isPrimitive_()Z", frame -> {
-      Class cls = frame.popRef().getMetaClass();
-      boolean isPrimitive = cls.isPrimitive();
-      frame.pushInt(isPrimitive ? 1 : 0);
-    });
-    Heap.registerMethod("java/lang/Class_getSuperclass_()Ljava/lang/Class;", frame -> {
-      Class superClass = frame.popRef().getMetaClass().getSuperClass();
-      if (superClass == null) {
-        frame.pushRef(null);
-        return;
-      }
-      frame.pushRef(superClass.getRuntimeClass());
-    });
-    Heap.registerMethod("java/lang/Class_getInterfaces0_()[Ljava/lang/Class;", frame -> {
-      throw new UnsupportedOperationException();
-    });
-    Heap.registerMethod("java/lang/Class_getComponentType_()Ljava/lang/Class;", frame -> {
-      Class cls = frame.popRef().getMetaClass();
-      if (cls.name.startsWith("[")) {
-        String name = cls.name.substring(1);
-        switch (name) {
-          case "C":
-            Class ccls = Heap.findClass("java/lang/Character");
-            Instance runtimeClass = ccls.getRuntimeClass();
-            frame.pushRef(runtimeClass);
-            break;
-          default:
-            throw new UnsupportedOperationException();
+            nameObj.setField("value", "[C", UnionSlot.of(array))
+            frame.pushRef(nameObj)
         }
-      }
-    });
-    Heap.registerMethod("java/lang/Class_getModifiers_()I", frame -> {
-      throw new UnsupportedOperationException();
-    });
-    Heap.registerMethod("java/lang/Class_getSigners_()[Ljava/lang/Object;", frame -> {
-      throw new UnsupportedOperationException();
-    });
-    Heap.registerMethod("java/lang/Class_setSigners_([Ljava/lang/Object;)V", frame -> {
-      throw new UnsupportedOperationException();
-    });
-    Heap.registerMethod("java/lang/Class_getEnclosingMethod0_()[Ljava/lang/Object;", frame -> {
-      throw new UnsupportedOperationException();
-    });
-    Heap.registerMethod("java/lang/Class_getDeclaringClass0_()Ljava/lang/Class;", frame -> {
-      throw new UnsupportedOperationException();
-    });
-    Heap.registerMethod("java/lang/Class_getProtectionDomain0_()Ljava/security/ProtectionDomain;",
-        frame -> {
-          throw new UnsupportedOperationException();
-        });
-    Heap.registerMethod("java/lang/Class_getGenericSignature0_()Ljava/lang/String;", frame -> {
-      throw new UnsupportedOperationException();
-    });
-    Heap.registerMethod("java/lang/Class_getRawAnnotations_()[B", frame -> {
-      throw new UnsupportedOperationException();
-    });
-    Heap.registerMethod("java/lang/Class_getRawTypeAnnotations_()[B", frame -> {
-      throw new UnsupportedOperationException();
-    });
-    Heap.registerMethod("java/lang/Class_getConstantPool_()Lsun/reflect/ConstantPool;", frame -> {
-      throw new UnsupportedOperationException();
-    });
-    Heap.registerMethod("java/lang/Class_getDeclaredFields0_(Z)[Ljava/lang/reflect/Field;",
-        frame -> {
-          throw new UnsupportedOperationException();
-        });
-    Heap.registerMethod("java/lang/Class_getDeclaredMethods0_(Z)[Ljava/lang/reflect/Method;",
-        frame -> {
-          throw new UnsupportedOperationException();
-        });
-    Heap.registerMethod(
-        "java/lang/Class_getDeclaredConstructors0_(Z)[Ljava/lang/reflect/Constructor;", frame -> {
-          throw new UnsupportedOperationException();
-        });
-    Heap.registerMethod("java/lang/Class_getDeclaredClasses0_()[Ljava/lang/Class;", frame -> {
-      throw new UnsupportedOperationException();
-    });
-    Heap.registerMethod("java/lang/Class_desiredAssertionStatus0_(Ljava/lang/Class;)Z", frame -> {
-      throw new UnsupportedOperationException();
-    });
-    Heap.registerMethod("java/lang/Class_getPrimitiveClass_(Ljava/lang/String;)Ljava/lang/Class;",
-        (frame) -> {
-          final Instance instance = frame.popRef();
-          final String val = Utils.obj2Str(instance);
-          Class cls = Heap.findClass(val);
-          frame.pushRef(cls.getRuntimeClass());
-        });
-    Heap.registerMethod("java/lang/Class_desiredAssertionStatus_()Z", frame -> {
-      java.lang.Object xx = frame.popRef();
-      frame.pushInt(1);
-    });
+        registerNativeMethod(
+                "java/lang/Class_forName0_(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;"
+        ) { frame: Frame ->
+            frame.popRef()
+            frame.popRef()
+            val init = frame.popInt()
+            val name = frame.popRef()
+            val clsName = Utils.replace(Utils.obj2Str(name), '.', '/')
+            var clazz = findClass(clsName)
+            if (clazz == null) {
+                clazz = frame.method.clazz.classLoader.loadClass(clsName)
+            }
+            checkNotNull(clazz) { "class not found $clsName" }
+            frame.pushRef(clazz.runtimeClass)
+            if (init == 1 && !(clazz.judgeStat())) {
+                val cinit = clazz.clinitMethod ?: throw IllegalStateException()
+                clazz.stat = 1
+                Interpreter.execute(cinit)
+                clazz.stat = 2
+            }
+        }
+        registerNativeMethod("java/lang/Class_isInstance_(Ljava/lang/Object;)Z") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_isAssignableFrom_(Ljava/lang/Class;)Z") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_isInterface_()Z") { frame: Frame ->
+            val cls = frame.popRef().metaClass
+            frame.pushInt(if (cls.isInterface) 1 else 0)
+        }
+        registerNativeMethod("java/lang/Class_isArray_()Z") { frame: Frame ->
+            val metaClass = frame.popRef().metaClass
+            val isArray = metaClass.name.startsWith("[")
+            frame.pushInt(if (isArray) 1 else 0)
+        }
+        registerNativeMethod("java/lang/Class_isPrimitive_()Z") { frame: Frame ->
+            val cls = frame.popRef().metaClass
+            val isPrimitive = cls.isPrimitive
+            frame.pushInt(if (isPrimitive) 1 else 0)
+        }
+        registerNativeMethod("java/lang/Class_getSuperclass_()Ljava/lang/Class;") { frame: Frame ->
+            val superClass = frame.popRef().metaClass.superClass
+            if (superClass == null) {
+                frame.pushRef(null)
+                return@registerNativeMethod
+            }
+            frame.pushRef(superClass.runtimeClass)
+        }
+        registerNativeMethod("java/lang/Class_getInterfaces0_()[Ljava/lang/Class;") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_getComponentType_()Ljava/lang/Class;") { frame: Frame ->
+            val cls = frame.popRef().metaClass
+            if (cls.name.startsWith("[")) {
+                val name = cls.name.substring(1)
+                when (name) {
+                    "C" -> {
+                        val ccls = findClass("java/lang/Character")
+                        val runtimeClass = ccls!!.runtimeClass
+                        frame.pushRef(runtimeClass)
+                    }
+                    else -> throw UnsupportedOperationException()
+                }
+            }
+        }
+        registerNativeMethod("java/lang/Class_getModifiers_()I") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_getSigners_()[Ljava/lang/Object;") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_setSigners_([Ljava/lang/Object;)V") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_getEnclosingMethod0_()[Ljava/lang/Object;") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_getDeclaringClass0_()Ljava/lang/Class;") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_getProtectionDomain0_()Ljava/security/ProtectionDomain;"
+        ) { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_getGenericSignature0_()Ljava/lang/String;") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_getRawAnnotations_()[B") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_getRawTypeAnnotations_()[B") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_getConstantPool_()Lsun/reflect/ConstantPool;") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_getDeclaredFields0_(Z)[Ljava/lang/reflect/Field;"
+        ) { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_getDeclaredMethods0_(Z)[Ljava/lang/reflect/Method;"
+        ) { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod(
+                "java/lang/Class_getDeclaredConstructors0_(Z)[Ljava/lang/reflect/Constructor;") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_getDeclaredClasses0_()[Ljava/lang/Class;") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_desiredAssertionStatus0_(Ljava/lang/Class;)Z") { frame: Frame? -> throw UnsupportedOperationException() }
+        registerNativeMethod("java/lang/Class_getPrimitiveClass_(Ljava/lang/String;)Ljava/lang/Class;"
+        ) { frame: Frame ->
+            val instance = frame.popRef()
+            val `val` = Utils.obj2Str(instance)
+            val cls = findClass(`val`)
+            frame.pushRef(cls!!.runtimeClass)
+        }
+        registerNativeMethod("java/lang/Class_desiredAssertionStatus_()Z") { frame: Frame ->
+            val xx: Any = frame.popRef()
+            frame.pushInt(1)
+        }
 
-    // hack
-    Heap.registerMethod("java/lang/Class_getSimpleName_()Ljava/lang/String;", frame -> {
-      Class cls = frame.popRef().getMetaClass();
-      int lidx = cls.name.lastIndexOf("/");
-      int idx = 0;
-      if (lidx > 0) {
-        idx = lidx + 1;
-      }
-      String sn = cls.name.substring(idx);
-      Instance obj = Utils.str2Obj(sn, frame.method.clazz.classLoader);
-      frame.pushRef(obj);
-    });
-
-    Heap.registerMethod("java/lang/Class_getCanonicalName_()Ljava/lang/String;", frame -> {
-      Class cls = frame.popRef().getMetaClass();
-      String sn = Utils.replace(cls.name, '/', '.');
-      Instance obj = Utils.str2Obj(sn, frame.method.clazz.classLoader);
-      frame.pushRef(obj);
-    });
-
-    Heap.registerMethod("java/lang/Class_getInterfaces_()[Ljava/lang/Class;", frame -> {
-      Instance thisObj = frame.popRef();
-      Class cls = (thisObj).getMetaClass();
-      if (!cls.interfaceNames.isEmpty() && cls.getInterfaces().isEmpty()) {
-        frame.pushRef(thisObj);
-        cls.interfaceInit(frame);
-        return;
-      }
-      List<Class> interfaces = cls.getInterfaces();
-      Integer count = interfaces.size();
-      String name = "[Ljava/lang/Class;";
-      Class clazz = Heap.findClass(name);
-      if (clazz == null) {
-        clazz = new Class(1, name, frame.method.clazz.classLoader, null);
-        clazz.setSuperClass(Heap.findClass("java/lang/Object"));
-        clazz.setStat(2);
-        Heap.registerClass(name, clazz);
-      }
-      Instance[] objs = new Instance[count];
-
-      for (int i = 0; i < interfaces.size(); i++) {
-        objs[i] = interfaces.get(i).getRuntimeClass();
-      }
-
-      InstanceArray instanceArray = new InstanceArray(clazz, objs);
-      frame.pushRef(instanceArray);
-    });
-
-    Heap.registerMethod("java/lang/Class_newInstance_()Ljava/lang/Object;", frame -> {
-      Class cls = frame.popRef().getMetaClass();
-      Instance obj = cls.newInstance();
-      frame.pushRef(obj);
-    });
-
-    Heap.registerMethod(
-        "java/lang/Class_getDeclaredField_(Ljava/lang/String;)Ljava/lang/reflect/Field;", frame -> {
-          Instance nameObj = frame.popRef();
-          Instance thisObj = frame.popRef();
-          String name = Utils.obj2Str(nameObj);
-          Field field = thisObj.getMetaClass().getField(name);
-          frame.pushRef(null);
-        });
-  }
+        // hack
+        registerNativeMethod("java/lang/Class_getSimpleName_()Ljava/lang/String;") { frame: Frame ->
+            val cls = frame.popRef().metaClass
+            val lidx = cls.name.lastIndexOf("/")
+            var idx = 0
+            if (lidx > 0) {
+                idx = lidx + 1
+            }
+            val sn = cls.name.substring(idx)
+            val obj = Utils.str2Obj(sn, frame.method.clazz.classLoader)
+            frame.pushRef(obj)
+        }
+        registerNativeMethod("java/lang/Class_getCanonicalName_()Ljava/lang/String;") { frame: Frame ->
+            val cls = frame.popRef().metaClass
+            val sn = Utils.replace(cls.name, '/', '.')
+            val obj = Utils.str2Obj(sn, frame.method.clazz.classLoader)
+            frame.pushRef(obj)
+        }
+        registerNativeMethod("java/lang/Class_getInterfaces_()[Ljava/lang/Class;") { frame: Frame ->
+            val thisObj = frame.popRef()
+            val cls = thisObj.metaClass
+            if (!cls.interfaceNames.isEmpty() && cls.interfaces.isEmpty()) {
+                frame.pushRef(thisObj)
+                cls.interfaceInit(frame)
+                return@registerNativeMethod
+            }
+            val interfaces = cls.interfaces
+            val count = interfaces.size
+            val name = "[Ljava/lang/Class;"
+            var clazz = findClass(name)
+            if (clazz == null) {
+                clazz = Class(1, name, frame.method.clazz.classLoader, null)
+                clazz!!.superClass = findClass("java/lang/Object")
+                clazz!!.stat = 2
+                registerClass(name, clazz!!)
+            }
+            val objs = arrayOfNulls<Instance>(count)
+            for (i in interfaces.indices) {
+                objs[i] = interfaces[i].runtimeClass
+            }
+            val instanceArray = InstanceArray(clazz, objs)
+            frame.pushRef(instanceArray)
+        }
+        registerNativeMethod("java/lang/Class_newInstance_()Ljava/lang/Object;") { frame: Frame ->
+            val cls = frame.popRef().metaClass
+            val obj = cls.newInstance()
+            frame.pushRef(obj)
+        }
+        registerNativeMethod(
+                "java/lang/Class_getDeclaredField_(Ljava/lang/String;)Ljava/lang/reflect/Field;") { frame: Frame ->
+            val nameObj = frame.popRef()
+            val thisObj = frame.popRef()
+            val name = Utils.obj2Str(nameObj)
+            val field = thisObj.metaClass.getField(name)
+            frame.pushRef(null)
+        }
+    }
 }
-

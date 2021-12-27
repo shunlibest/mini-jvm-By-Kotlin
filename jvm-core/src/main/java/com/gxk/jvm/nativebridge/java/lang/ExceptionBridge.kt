@@ -1,18 +1,16 @@
-package com.gxk.jvm.nativebridge.java.lang;
+package com.gxk.jvm.nativebridge.java.lang
 
-import com.gxk.jvm.rtda.UnionSlot;
-import com.gxk.jvm.rtda.heap.Heap;
-import com.gxk.jvm.rtda.heap.Field;
-import com.gxk.jvm.rtda.heap.Instance;
+import com.gxk.jvm.rtda.Frame
+import com.gxk.jvm.rtda.UnionSlot
+import com.gxk.jvm.rtda.heap.Heap.registerNativeMethod
 
-public abstract class ExceptionBridge {
-
-  public static void registerNatives0() {
-    Heap.registerMethod("java/lang/Exception_<init>_(Ljava/lang/String;)V", frame -> {
-      Instance str = frame.popRef();
-      Instance thisObj = frame.popRef();
-      Field msgField = thisObj.getField("detailMessage", "Ljava/lang/String;");
-      msgField.val = UnionSlot.of(str);
-    });
-  }
+object ExceptionBridge {
+    fun registerNatives0() {
+        registerNativeMethod("java/lang/Exception_<init>_(Ljava/lang/String;)V") { frame: Frame ->
+            val str = frame.popRef()
+            val thisObj = frame.popRef()
+            val msgField = thisObj.getField("detailMessage", "Ljava/lang/String;")
+            msgField.`val` = UnionSlot.of(str)
+        }
+    }
 }

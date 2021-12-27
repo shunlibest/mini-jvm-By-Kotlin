@@ -69,7 +69,7 @@ public class InvokeDynamicInst implements Instruction {
 
     String format =Utils.genNativeMethodKey( lcname, lm.name, lm.descriptor);
     if (Heap.findMethod(format) == null) {
-      Heap.registerMethod(format, (f) -> {
+      Heap.registerNativeMethod(format, (f) -> {
         Class bsc= Heap.findClass(bsTargetClass);
         Method bsm = bsc.getLambdaMethod(bsTargetMethod);
 

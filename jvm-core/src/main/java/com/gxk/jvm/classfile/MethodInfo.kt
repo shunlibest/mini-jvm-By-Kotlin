@@ -16,25 +16,27 @@ data class MethodInfo(
         val descriptor: Descriptor,
         val attributes: Attributes
 ) {
-    val codeAttribute: CodeAttribute?
+    val codeAttribute: CodeAttribute
         get() {
             for (attribute in attributes.attributes) {
                 if (attribute is CodeAttribute) {
                     return attribute
                 }
             }
-            return null
+            throw IllegalStateException("codeAttribute找不到")
         }
-    val lineNumber: LineNumberTable?
+    val lineNumber: LineNumberTable
         get() {
-            if (this.codeAttribute == null) {
-                return null
-            }
-            for (attribute in this.codeAttribute!!.attributes.attributes) {
+//            if (this.codeAttribute == null) {
+//                return null
+//            }
+            for (attribute in this.codeAttribute.attributes.attributes) {
                 if (attribute is LineNumberTable) {
                     return attribute
                 }
             }
-            return null
+            val line = LineNumberTable.Line(0, 0)
+            val arrayListOf = arrayListOf(line)
+            return LineNumberTable(arrayListOf.toTypedArray())
         }
 }
