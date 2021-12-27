@@ -6,13 +6,13 @@ package com.gxk.jvm.classfile;
  * 阿达
  */
 public class Interface {
-  public final String name;
+    public final String name;
 
-  public Interface(String name) {
-    this.name = name;
-  }
+    public Interface(String name) {
+        this.name = name;
+    }
 
-  public String getName() {
-    return name;
-  }
+    public String getName() {
+        return name;
+    }
 }

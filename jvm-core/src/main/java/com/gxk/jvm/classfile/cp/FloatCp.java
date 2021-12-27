@@ -4,10 +4,10 @@ import com.gxk.jvm.classfile.ConstantInfo;
 
 public class FloatCp extends ConstantInfo {
 
-  public final float val;
+    public final float val;
 
-  public FloatCp(int infoEnum, float val) {
-    super(infoEnum);
-    this.val = val;
-  }
+    public FloatCp(int infoEnum, float val) {
+        super(infoEnum);
+        this.val = val;
+    }
 }

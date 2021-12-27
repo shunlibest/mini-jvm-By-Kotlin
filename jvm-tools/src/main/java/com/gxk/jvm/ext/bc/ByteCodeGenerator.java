@@ -3,7 +3,7 @@ package com.gxk.jvm.ext.bc;
 import com.gxk.jvm.classfile.ClassFile;
 import com.gxk.jvm.classfile.ClassReader;
 import com.gxk.jvm.classfile.MethodInfo;
-import com.gxk.jvm.classfile.attribute.Code;
+import com.gxk.jvm.classfile.attribute.CodeAttribute;
 import com.gxk.jvm.instruction.Instruction;
 import com.gxk.jvm.rtda.heap.Method;
 import java.io.File;
@@ -55,12 +55,12 @@ public class ByteCodeGenerator {
   }
 
   private static Method map(MethodInfo cfMethodInfo) {
-    Code code = cfMethodInfo.getCode();
-    if (code == null) {
+    CodeAttribute codeAttribute = cfMethodInfo.getCodeAttribute();
+    if (codeAttribute == null) {
       return new Method(cfMethodInfo.accessFlags, cfMethodInfo.name, cfMethodInfo.descriptor.descriptor, 0, 0,
           null, null, null);
     }
     return new Method(cfMethodInfo.accessFlags, cfMethodInfo.name, cfMethodInfo.descriptor.descriptor,
-        code.maxStacks, code.maxLocals, code.getInstructions(), null, null);
+        codeAttribute.maxStacks, codeAttribute.maxLocals, codeAttribute.getInstructions(), null, null);
   }
 }

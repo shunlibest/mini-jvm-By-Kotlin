@@ -5,13 +5,13 @@ import com.gxk.jvm.rtda.heap.NativeMethod;
 
 public class MetaSpace {
 
-  public static Thread main;
+    public static Thread main;
 
-  public static Thread getMainEnv() {
-    return main;
-  }
+    public static Thread getMainEnv() {
+        return main;
+    }
 
-  public static NativeMethod findNativeMethod(String key) {
-    return Heap.findMethod(key);
-  }
+    public static NativeMethod findNativeMethod(String key) {
+        return Heap.INSTANCE.findMethod(key);
+    }
 }

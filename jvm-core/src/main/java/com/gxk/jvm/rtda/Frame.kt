@@ -5,11 +5,27 @@ import com.gxk.jvm.rtda.heap.Instance
 import com.gxk.jvm.rtda.heap.Method
 
 // 栈帧, 每一个方法, 加载的时候,会生成一个方法栈
+/**
+ * 栈帧（frame）是用来存储数据和部分过程结果的数据结构，同时也用来处理动态链接方法返回值和异常分派。
+ * 栈帧随着方法调用而创建，随着方法结束而销毁(包括正常完成和异常完成)
+ *
+ * 栈帧的存储空间由创建它的线程分配在Java虛拟机栈之中，
+ * 每一个栈帧都有自己的本地变量表、操作数栈和指向当前方法所属的类的运行时常量池的引用。
+ *
+ * 调用新的方法时，新的栈帧也会随之而创建，并且会随着程序控制权移交到新方法而成为新的当前栈帧。
+ * 方法返回之际，当前栈帧会传回此方法的执行结果给前一个栈帧，然后，虚拟机会丢弃当前栈帧，使得前一个栈帧重新成为当前栈帧。
+ * @constructor Create empty Frame
+ */
 class Frame {
+    //当前frame对应的method;
     val method: Method
+
+    //局部变量表,最大长度在创建时就已经确认,为方法内的变量个数
     private val localVars: LocalVars
+    //操作数栈
     private val operandStack: OperandStack
     private val instructionMap: Map<Int, Instruction>
+    //当前线程, frame是线程私有的
     val thread: Thread
     var nextPc = 0
     var pc = 0
@@ -39,8 +55,8 @@ class Frame {
         }
 
     // operand stack operation
-    fun pushInt(`val`: Int) {
-        operandStack.pushInt(`val`)
+    fun pushInt(value: Int) {
+        operandStack.pushInt(value)
     }
 
     fun popInt(): Int {
@@ -71,8 +87,8 @@ class Frame {
         return operandStack.popDouble()
     }
 
-    fun pushRef(`val`: Instance?) {
-        operandStack.pushRef(`val`)
+    fun pushRef(value: Instance?) {
+        operandStack.pushRef(value)
     }
 
     fun popRef(): Instance {
@@ -155,6 +171,7 @@ class Frame {
     fun getCurrentSource(): String? {
         return method.clazz.getSource()
     }
+
     fun pop(): Slot {
         return operandStack.popSlot()
     }

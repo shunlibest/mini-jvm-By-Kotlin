@@ -3,7 +3,6 @@ package com.gxk.jvm.classloader
 import com.gxk.jvm.classfile.ClassFile
 import com.gxk.jvm.classfile.FieldInfo
 import com.gxk.jvm.classfile.MethodInfo
-import com.gxk.jvm.classfile.attribute.BootstrapMethods
 import com.gxk.jvm.classpath.Entry
 import com.gxk.jvm.rtda.heap.*
 import com.gxk.jvm.util.Utils
@@ -120,7 +119,7 @@ public class ClassLoader(val name: String, private val entry: Entry) {
     }
 
     fun map(cfMethodInfo: MethodInfo): Method {
-        val code = cfMethodInfo.code
+        val code = cfMethodInfo.codeAttribute
                 ?: return Method(cfMethodInfo.accessFlags, cfMethodInfo.name, cfMethodInfo.descriptor.descriptor, 0, 0,
                         null!!, null!!, cfMethodInfo.lineNumber)
         return Method(cfMethodInfo.accessFlags, cfMethodInfo.name, cfMethodInfo.descriptor.descriptor,

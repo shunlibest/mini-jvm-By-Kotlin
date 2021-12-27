@@ -5,8 +5,8 @@ import com.gxk.jvm.rtda.Frame;
 
 public class DConst1Inst implements Instruction {
 
-  @Override
-  public void execute(Frame frame) {
-    frame.pushDouble(1.0d);
-  }
+    @Override
+    public void execute(Frame frame) {
+        frame.pushDouble(1.0d);
+    }
 }

@@ -17,6 +17,7 @@ public class SiPushInst implements Instruction {
         this.val = val;
     }
 
+    //本身一条指令, + 读取后面两个字节的数据
     @Override
     public int offset() {
         return 3;

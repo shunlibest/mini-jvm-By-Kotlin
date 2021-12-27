@@ -61,20 +61,20 @@ object InstructionReader {
             //四、ldc系列
             //该系列命令负责把数值常量或String常量值从常量池中推送至栈顶。该命令后面需要给一个表示常量在常量池中位置(编号)的参数
             //注意: 通过new创建的String都是不放在常量池中
-            0x12 -> {
+            0x12 -> {           //将int, float或String型常量值从常量池中推送至栈顶
                 val index = stm.readUnsignedByte()
                 val info = constantPool.infos[index - 1]
                 when (info.infoEnum) {
                     ConstantPoolInfoEnum.CONSTANT_String -> {
                         val stringIndex = (info as StringCp).stringIndex
                         val string = Utils.getString(constantPool, stringIndex)
-                        return LdcInst("Ljava/lang/String", string)
+                        LdcInst("Ljava/lang/String", string)
                     }
-                    ConstantPoolInfoEnum.CONSTANT_Integer -> return LdcInst("I", (info as IntegerCp).`val`)
-                    ConstantPoolInfoEnum.CONSTANT_Float -> return LdcInst("F", (info as FloatCp).`val`)
-                    ConstantPoolInfoEnum.CONSTANT_Class -> return LdcInst("L", Utils.getString(constantPool, (info as ClassCp).nameIndex))
+                    ConstantPoolInfoEnum.CONSTANT_Integer -> LdcInst("I", (info as IntegerCp).`val`)
+                    ConstantPoolInfoEnum.CONSTANT_Float -> LdcInst("F", (info as FloatCp).`val`)
+                    ConstantPoolInfoEnum.CONSTANT_Class -> LdcInst("L", Utils.getString(constantPool, (info as ClassCp).nameIndex))
+                    else -> throw IllegalStateException()
                 }
-                throw IllegalStateException()
             }
             0x13 -> {
                 val lwIndex = stm.readUnsignedShort()
@@ -419,7 +419,7 @@ object InstructionReader {
             0xc8 ->                 // goto_w
                 GotoWInst(stm.readInt())
             0xc9 -> throw UnsupportedOperationException()
-            else -> null
+            else -> throw IllegalArgumentException("找不到对应指令")
         }
     }
 }

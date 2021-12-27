@@ -1,7 +1,5 @@
 package com.gxk.jvm.rtda.heap
 
-import com.gxk.jvm.rtda.heap.NativeMethod
-import com.gxk.jvm.rtda.heap.Heap
 import java.lang.IllegalStateException
 import com.gxk.jvm.util.EnvHolder
 import com.gxk.jvm.util.Logger
@@ -23,7 +21,11 @@ object Heap {
         NATIVE_METHOD_MAP[key] = method
     }
 
-    fun findMethod(key: String): NativeMethod? {
+    fun findMethod(key: String): NativeMethod {
+        return findMethodCheck(key) ?: throw IllegalStateException("do not findMethod:$key")
+    }
+
+    private fun findMethodCheck(key: String): NativeMethod? {
         return NATIVE_METHOD_MAP[key]
     }
 
