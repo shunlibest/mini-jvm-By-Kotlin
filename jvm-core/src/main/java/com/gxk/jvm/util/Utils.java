@@ -409,7 +409,7 @@ public abstract class Utils {
     }
 
     public static void invokeMethod(Method method) {
-        NativeMethod nmb = Heap.INSTANCE.findMethod(Utils.genNativeMethodKey(method));
+        NativeMethod nmb = Heap.INSTANCE.findNativeMethod(Utils.genNativeMethodKey(method));
         if (nmb != null) {
             nmb.invoke(MetaSpace.getMainEnv().topFrame());
             return;

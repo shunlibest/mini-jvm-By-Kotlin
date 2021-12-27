@@ -1,66 +1,52 @@
-package com.gxk.jvm.ext.bc;
+package com.gxk.jvm.ext.bc
 
-import com.gxk.jvm.classfile.ClassFile;
-import com.gxk.jvm.classfile.ClassReader;
-import com.gxk.jvm.classfile.MethodInfo;
-import com.gxk.jvm.classfile.attribute.CodeAttribute;
-import com.gxk.jvm.instruction.Instruction;
-import com.gxk.jvm.rtda.heap.Method;
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
+import com.gxk.jvm.classfile.ClassFile
+import com.gxk.jvm.classfile.ClassReader.read
+import com.gxk.jvm.classfile.MethodInfo
+import java.io.IOException
+import com.gxk.jvm.ext.bc.ByteCodeGenerator
+import com.gxk.jvm.rtda.heap.Method
+import java.io.File
+import java.util.stream.Collectors
 
-public class ByteCodeGenerator {
-
-  public static void gen(String clazzPath, String methodName) {
-    File file = new File(clazzPath);
-    if (!file.exists() || !file.isFile()) {
-      System.out.println("class missing, or illegal path");
-      return;
+object ByteCodeGenerator {
+    fun gen(clazzPath: String, methodName: String) {
+        val file = File(clazzPath)
+        if (!file.exists() || !file.isFile) {
+            println("class missing, or illegal path")
+            return
+        }
+        var cf: ClassFile? = null
+        cf = try {
+            read(clazzPath)
+        } catch (e: IOException) {
+            println("parse class err, $clazzPath")
+            return
+        }
+        var target: MethodInfo? = null
+        for (methodInfo in cf!!.methods.methodInfos) {
+            if (methodInfo.name == methodName) {
+                target = methodInfo
+            }
+        }
+        if (target == null) {
+            println("not found method, $methodName")
+            return
+        }
+        val method = map(target)
+        val header = "main " + method.maxStacks + " " + method.maxLocals + " " + method.args.size
+        println(header)
+        val keys = method.instructionMap.keys.stream().sorted()
+                .collect(Collectors.toList())
+        for (key in keys) {
+            val instruction = method.instructionMap[key]
+            println(key.toString() + " " + instruction!!.format())
+        }
     }
 
-    ClassFile cf = null;
-    try {
-      cf = ClassReader.read(clazzPath);
-    } catch (IOException e) {
-      System.out.println("parse class err, " + clazzPath);
-      return;
+    private fun map(cfMethodInfo: MethodInfo): Method {
+        val codeAttribute = cfMethodInfo.codeAttribute
+        return Method(cfMethodInfo.accessFlags, cfMethodInfo.name, cfMethodInfo.descriptor.descriptor,
+                codeAttribute.maxStacks, codeAttribute.maxLocals, codeAttribute.getInstructions(), null!!, null!!)
     }
-
-    MethodInfo target = null;
-    for (MethodInfo methodInfo : cf.methods.methodInfos) {
-      if (methodInfo.name.equals(methodName)) {
-        target = methodInfo;
-      }
-    }
-
-    if (target == null) {
-      System.out.println("not found method, " + methodName);
-      return;
-    }
-
-    Method method = map(target);
-
-    String header =
-        "main " + method.maxStacks + " " + method.maxLocals + " " + method.getArgs().size();
-    System.out.println(header);
-
-    List<Integer> keys = method.instructionMap.keySet().stream().sorted()
-        .collect(Collectors.toList());
-    for (Integer key : keys) {
-      Instruction instruction = method.instructionMap.get(key);
-      System.out.println(key + " " + instruction.format());
-    }
-  }
-
-  private static Method map(MethodInfo cfMethodInfo) {
-    CodeAttribute codeAttribute = cfMethodInfo.getCodeAttribute();
-    if (codeAttribute == null) {
-      return new Method(cfMethodInfo.accessFlags, cfMethodInfo.name, cfMethodInfo.descriptor.descriptor, 0, 0,
-          null, null, null);
-    }
-    return new Method(cfMethodInfo.accessFlags, cfMethodInfo.name, cfMethodInfo.descriptor.descriptor,
-        codeAttribute.maxStacks, codeAttribute.maxLocals, codeAttribute.getInstructions(), null, null);
-  }
 }

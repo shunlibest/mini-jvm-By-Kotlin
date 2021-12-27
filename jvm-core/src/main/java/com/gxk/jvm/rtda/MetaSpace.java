@@ -12,6 +12,6 @@ public class MetaSpace {
     }
 
     public static NativeMethod findNativeMethod(String key) {
-        return Heap.INSTANCE.findMethod(key);
+        return Heap.INSTANCE.findNativeMethod(key);
     }
 }

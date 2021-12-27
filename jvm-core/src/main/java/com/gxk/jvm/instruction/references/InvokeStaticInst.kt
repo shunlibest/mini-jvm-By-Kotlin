@@ -1,68 +1,41 @@
-package com.gxk.jvm.instruction.references;
+package com.gxk.jvm.instruction.references
 
-import com.gxk.jvm.instruction.Instruction;
+import com.gxk.jvm.rtda.heap.Heap.findNativeMethod
+import com.gxk.jvm.rtda.heap.Heap.findClass
+import com.gxk.jvm.instruction.Instruction
+import com.gxk.jvm.rtda.Frame
+import com.gxk.jvm.util.Utils
 
-
-import com.gxk.jvm.rtda.Frame;
-import com.gxk.jvm.rtda.heap.Heap;
-import com.gxk.jvm.rtda.heap.Class;
-import com.gxk.jvm.rtda.heap.Method;
-import com.gxk.jvm.rtda.heap.NativeMethod;
-
-import com.gxk.jvm.util.Utils;
-
-public class InvokeStaticInst implements Instruction {
-
-  public final String clazzName;
-  public final String methodName;
-  public final String descriptor;
-
-  public InvokeStaticInst(String clazzName, String methodName, String descriptor) {
-    this.clazzName = clazzName;
-    this.methodName = methodName;
-    this.descriptor = descriptor;
-  }
-
-  @Override
-  public int offset() {
-    return 3;
-  }
-
-  @Override
-  public void execute(Frame frame) {
-    NativeMethod nm = Heap.findMethod(Utils.genNativeMethodKey( clazzName, methodName, descriptor));
-    if (nm != null) {
-      nm.invoke(frame);
-      return;
+class InvokeStaticInst(val clazzName: String, val methodName: String, val descriptor: String) : Instruction {
+    override fun offset(): Int {
+        return 3
     }
 
-    Class aClass = Heap.findClass(clazzName);
-    if (aClass == null) {
-      aClass = frame.method.clazz.classLoader.loadClass(clazzName);
+    override fun execute(frame: Frame) {
+        val nm = findNativeMethod(Utils.genNativeMethodKey(clazzName, methodName, descriptor))
+        if (nm != null) {
+            nm.invoke(frame)
+            return
+        }
+        var aClass = findClass(clazzName)
+        if (aClass == null) {
+            aClass = frame.method.clazz.classLoader.loadClass(clazzName)
+        }
+        Utils.clinit(aClass)
+        val method = aClass.getMethod(methodName, descriptor)
+        check(!method.isNative) { "un impl native method call, $method" }
+        Utils.invokeMethod(method)
     }
-    Utils.clinit(aClass);
 
-    Method method = aClass.getMethod(methodName, descriptor);
-
-    if (method.isNative()) {
-      throw new IllegalStateException("un impl native method call, " + method);
+    override fun format(): String {
+        return "invokestatic $clazzName $methodName $descriptor"
     }
 
-    Utils.invokeMethod(method);
-  }
-
-  @Override
-  public String format() {
-    return "invokestatic " + clazzName + " " + methodName + " " + descriptor;
-  }
-
-  @Override
-  public String toString() {
-    return "InvokeStaticInst{" +
-        "clazzName='" + clazzName + '\'' +
-        ", methodName='" + methodName + '\'' +
-        ", descriptor='" + descriptor + '\'' +
-        '}';
-  }
+    override fun toString(): String {
+        return "InvokeStaticInst{" +
+                "clazzName='" + clazzName + '\'' +
+                ", methodName='" + methodName + '\'' +
+                ", descriptor='" + descriptor + '\'' +
+                '}'
+    }
 }
-

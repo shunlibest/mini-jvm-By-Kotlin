@@ -1,30 +1,18 @@
-package com.gxk.jvm.instruction.extended;
+package com.gxk.jvm.instruction.extended
 
-import com.gxk.jvm.instruction.Instruction;
+import com.gxk.jvm.instruction.Instruction
+import com.gxk.jvm.rtda.Frame
 
+class GotoInst(val offset: Short) : Instruction {
+    override fun offset(): Int {
+        return 3
+    }
 
-import com.gxk.jvm.rtda.Frame;
+    override fun execute(frame: Frame) {
+        frame.nextPc = frame.pc + offset
+    }
 
-public class GotoInst implements Instruction {
-
-  public final short offset;
-
-  public GotoInst(short offset) {
-    this.offset = offset;
-  }
-
-  @Override
-  public int offset() {
-    return 3;
-  }
-
-  @Override
-  public void execute(Frame frame) {
-    frame.nextPc = frame.getPc() + offset;
-  }
-
-  @Override
-  public String format() {
-    return "goto " + offset;
-  }
+    override fun format(): String {
+        return "goto $offset"
+    }
 }

@@ -1,42 +1,36 @@
-package com.gxk.jvm.instruction.references;
+package com.gxk.jvm.instruction.references
 
-import com.gxk.jvm.instruction.Instruction;
-import com.gxk.jvm.rtda.Frame;
-import com.gxk.jvm.rtda.Thread;
-import com.gxk.jvm.rtda.heap.Instance;
+import com.gxk.jvm.instruction.Instruction
+import com.gxk.jvm.rtda.Frame
+import java.lang.RuntimeException
 
-public class AThrowInst implements Instruction {
+class AThrowInst : Instruction {
+    override fun execute(frame: Frame) {
+        val thread = frame.thread
+        val exc = frame.popRef()
+        val name = exc.clazz.name
+        var handlerPc = frame.method.getHandlerPc(frame.pc, name)
+        while (handlerPc == null && !thread.empty()) {
+            val ef = thread.popFrame()
+            val msg = ef.currentMethodFullName + "(" + ef.getCurrentSource() + ":" + ef.currentLine + ")"
+            System.err.println(msg)
+            if (thread.empty()) {
+                break
+            }
+            val f = thread.topFrame()
+            handlerPc = f.method.getHandlerPc(f.pc, name)
+        }
 
-  @Override
-  public void execute(Frame frame) {
-    Thread thread = frame.thread;
-    Instance exc = frame.popRef();
-    String name = exc.clazz.name;
-
-    Integer handlerPc = frame.method.getHandlerPc(frame.getPc(), name);
-    while (handlerPc == null && !thread.empty()) {
-      Frame ef = thread.popFrame();
-      String msg = ef.getCurrentMethodFullName() + "(" + ef.getCurrentSource() + ":" + ef.getCurrentLine() + ")";
-      System.err.println(msg);
-      if (thread.empty()) {
-        break;
-      }
-      final Frame f = thread.topFrame();
-      handlerPc = f.method.getHandlerPc(f.getPc(), name);
+        // no exception handler ...
+        if (handlerPc == null) {
+            System.err.println(exc)
+            throw RuntimeException("no exception handler")
+        }
+        thread.topFrame().pushRef(exc)
+        thread.topFrame().nextPc = handlerPc
     }
 
-    // no exception handler ...
-    if (handlerPc == null) {
-      System.err.println(exc);
-      throw new RuntimeException("no exception handler");
+    override fun format(): String {
+        return "athrow"
     }
-
-    thread.topFrame().pushRef(exc);
-    thread.topFrame().nextPc = handlerPc;
-  }
-
-  @Override
-  public String format() {
-    return "athrow";
-  }
 }

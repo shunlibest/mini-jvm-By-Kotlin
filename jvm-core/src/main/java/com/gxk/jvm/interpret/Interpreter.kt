@@ -16,7 +16,7 @@ import java.lang.IllegalStateException
 import java.lang.StringBuilder
 import java.util.*
 
-object Interpreter {
+public object Interpreter {
 
     /**
      * 执行main方法

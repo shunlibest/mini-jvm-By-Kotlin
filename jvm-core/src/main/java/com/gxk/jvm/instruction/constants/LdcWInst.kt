@@ -1,70 +1,53 @@
-package com.gxk.jvm.instruction.constants;
+package com.gxk.jvm.instruction.constants
 
-import com.gxk.jvm.instruction.Instruction;
-import com.gxk.jvm.interpret.Interpreter;
-import com.gxk.jvm.rtda.Frame;
-import com.gxk.jvm.rtda.UnionSlot;
-import com.gxk.jvm.rtda.heap.Class;
-import com.gxk.jvm.rtda.heap.Field;
-import com.gxk.jvm.rtda.heap.Heap;
-import com.gxk.jvm.rtda.heap.Instance;
-import com.gxk.jvm.rtda.heap.InstanceArray;
 
-public class LdcWInst implements Instruction {
+import com.gxk.jvm.rtda.heap.Heap.findClass
+import com.gxk.jvm.instruction.Instruction
+import com.gxk.jvm.interpret.Interpreter.execute
+import com.gxk.jvm.rtda.Frame
+import com.gxk.jvm.rtda.heap.InstanceArray
+import com.gxk.jvm.rtda.UnionSlot
+import com.gxk.jvm.rtda.heap.Class
+import com.gxk.jvm.rtda.heap.Instance
 
-  public final String descriptor;
-  public final Object val;
-
-  @Override
-  public int offset() {
-    return 3;
-  }
-
-  public LdcWInst(String descriptor, Object val) {
-    this.descriptor = descriptor;
-    this.val = val;
-  }
-
-  @Override
-  public void execute(Frame frame) {
-    switch (descriptor) {
-      case "I":
-        frame.pushInt(((Integer) val));
-        break;
-      case "F":
-        frame.pushFloat(((float) val));
-        break;
-      case "Ljava/lang/String":
-        Class klass = Heap.findClass("java/lang/String");
-        if (klass == null) {
-          klass = frame.method.clazz.classLoader.loadClass("java/lang/String");
-        }
-        if (!klass.getStat()) {
-          klass.setStat(1);
-          Interpreter.execute(klass.getMethod("<clinit>", "()V"));
-          klass.setStat(2);
-        }
-        Instance object = klass.newInstance();
-        Field field = object.getField("value", "[C");
-        Class arrClazz = new Class(1, "[C", frame.method.clazz.classLoader, null);
-
-        char[] chars = val.toString().toCharArray();
-        Character[] characters = new Character[chars.length];
-        for (int i = 0; i < chars.length; i++) {
-          characters[i] = chars[i];
-        }
-        InstanceArray arr = new InstanceArray(arrClazz, characters);
-        field.val = UnionSlot.of(arr);
-        frame.pushRef(object);
-        break;
-      default:
-        frame.pushRef((Instance) val);
-        break;
+class LdcWInst(val descriptor: String, val `val`: Any) : Instruction {
+    override fun offset(): Int {
+        return 3
     }
-  }
 
-  @Override
-  public String format() {
-    return "ldcw " + descriptor + " " + val;
-  }
+    override fun execute(frame: Frame) {
+        when (descriptor) {
+            "I" -> frame.pushInt((`val` as Int))
+            "F" -> frame.pushFloat(`val` as Float)
+            "Ljava/lang/String" -> {
+                var klass = findClass("java/lang/String")
+                if (klass == null) {
+                    klass = frame.method.clazz.classLoader.loadClass("java/lang/String")
+                }
+                if (!klass.judgeStat()) {
+                    klass.stat = 1
+                    execute(klass.getMethod("<clinit>", "()V"))
+                    klass.stat = 2
+                }
+                val `object` = klass.newInstance()
+                val field = `object`.getField("value", "[C")
+                val arrClazz = Class(1, "[C", frame.method.clazz.classLoader, null)
+                val chars = `val`.toString().toCharArray()
+                val characters = arrayOfNulls<Char>(chars.size)
+                var i = 0
+                while (i < chars.size) {
+                    characters[i] = chars[i]
+                    i++
+                }
+                val arr = InstanceArray(arrClazz, characters)
+                field.`val` = UnionSlot.of(arr)
+                frame.pushRef(`object`)
+            }
+            else -> frame.pushRef(`val` as Instance)
+        }
+    }
+
+    override fun format(): String {
+        return "ldcw $descriptor $`val`"
+    }
 }

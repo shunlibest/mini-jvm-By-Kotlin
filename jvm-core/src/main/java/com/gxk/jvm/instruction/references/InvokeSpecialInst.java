@@ -9,7 +9,6 @@ import com.gxk.jvm.rtda.heap.Class;
 import com.gxk.jvm.rtda.heap.Method;
 import com.gxk.jvm.rtda.heap.NativeMethod;
 import com.gxk.jvm.util.Utils;
-import java.util.List;
 
 public class InvokeSpecialInst implements Instruction {
 
@@ -30,13 +29,13 @@ public class InvokeSpecialInst implements Instruction {
 
   @Override
   public void execute(Frame frame) {
-    NativeMethod nm = Heap.findMethod(Utils.genNativeMethodKey(clazz, methodName, methodDescriptor));
+    NativeMethod nm = Heap.INSTANCE.findNativeMethod(Utils.genNativeMethodKey(clazz, methodName, methodDescriptor));
     if (nm != null) {
       nm.invoke(frame);
       return;
     }
 
-    Class aClass = Heap.findClass(clazz);
+    Class aClass = Heap.INSTANCE.findClass(clazz);
     if (aClass == null) {
       throw new IllegalStateException();
     }

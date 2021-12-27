@@ -27,13 +27,12 @@ object Heap {
         NATIVE_METHOD_MAP[key] = method
     }
 
-    fun findMethod(key: String): NativeMethod {
-        return findMethodCheck(key) ?: throw IllegalStateException("do not findMethod:$key")
-    }
-
-    private fun findMethodCheck(key: String): NativeMethod? {
+    fun findNativeMethod(key: String): NativeMethod? {
         return NATIVE_METHOD_MAP[key]
     }
+
+//    private fun findMethodCheck(key: String): NativeMethod? {
+//    }
 
     fun findClass(name: String): Class? {
         return STRING_K_CLASS_MAP[name]

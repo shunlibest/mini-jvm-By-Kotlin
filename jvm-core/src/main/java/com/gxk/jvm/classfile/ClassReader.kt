@@ -218,7 +218,7 @@ object ClassReader {
                 AttributeEnum.LineNumberTable -> {
                     val length = input.readUnsignedShort()
                     val lines = arrayOfNulls<LineNumberTable.Line>(length)
-                    for (i1 in 0..length) {
+                    for (i1 in 0 until length) {
                         lines[i1] = LineNumberTable.Line(input.readUnsignedShort(), input.readUnsignedShort())
                     }
                     attribute = LineNumberTable(lines)

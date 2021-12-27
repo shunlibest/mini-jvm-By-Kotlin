@@ -1,6 +1,7 @@
 package com.gxk.jvm.classloader
 
 import com.gxk.jvm.classfile.ClassFile
+import com.gxk.jvm.classfile.ExceptionTable
 import com.gxk.jvm.classfile.FieldInfo
 import com.gxk.jvm.classfile.MethodInfo
 import com.gxk.jvm.classpath.Entry
@@ -58,7 +59,7 @@ public class ClassLoader(val name: String, private val entry: Entry) {
         for (method in clazz.methods) {
             if (method.isNative) {
                 val key = Utils.genNativeMethodKey(method.clazz.name, method.name, method.descriptor)
-                val nm = Heap.findMethod(key)
+                val nm = Heap.findNativeMethod(key)
                 if (nm == null) {
                     System.err.println("not found native method $key $method")
                 }
@@ -121,9 +122,12 @@ public class ClassLoader(val name: String, private val entry: Entry) {
 
     fun map(cfMethodInfo: MethodInfo): Method {
         val code = cfMethodInfo.codeAttribute
-
-//                ?: return Method(cfMethodInfo.accessFlags, cfMethodInfo.name, cfMethodInfo.descriptor.descriptor, 0, 0,
-//                        null!!, null!!, cfMethodInfo.lineNumber)
+        if (code == null) {
+            println("map error")
+            return Method(cfMethodInfo.accessFlags, cfMethodInfo.name, cfMethodInfo.descriptor.descriptor, 0, 0,
+                    emptyMap(), ExceptionTable(emptyArray()), cfMethodInfo.lineNumber)
+        }
+//
         return Method(cfMethodInfo.accessFlags, cfMethodInfo.name, cfMethodInfo.descriptor.descriptor,
                 code.maxStacks, code.maxLocals, code.getInstructions(), code.exceptionTable,
                 cfMethodInfo.lineNumber)

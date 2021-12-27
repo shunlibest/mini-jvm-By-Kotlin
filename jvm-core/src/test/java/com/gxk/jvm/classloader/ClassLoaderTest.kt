@@ -1,82 +1,71 @@
-package com.gxk.jvm.classloader;
+package com.gxk.jvm.classloader
 
-import com.gxk.jvm.VirtualMachine;
-import com.gxk.jvm.classpath.Classpath;
-import com.gxk.jvm.classpath.Entry;
-import com.gxk.jvm.rtda.heap.Heap;
-import com.gxk.jvm.rtda.heap.Class;
-import com.gxk.jvm.util.EnvHolder;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import com.gxk.jvm.VirtualMachine.Companion.loadLibrary
+import com.gxk.jvm.rtda.heap.Heap.clear
+import java.nio.file.Paths
+import com.gxk.jvm.util.EnvHolder
+import java.lang.IllegalStateException
+import com.gxk.jvm.classpath.Classpath
+import com.gxk.jvm.rtda.heap.Heap
+import org.junit.After
+import org.junit.Assert
+import org.junit.Before
+import org.junit.Test
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
+class ClassLoaderTest {
+    private var classLoader: ClassLoader? = null
+    @Before
+    fun setup() {
+        val home = System.getenv("JAVA_HOME")
+        val jarPath = Paths.get(home, "jre", "lib", "rt.jar")
 
-import static org.junit.Assert.*;
-
-public class ClassLoaderTest {
-
-  private ClassLoader classLoader;
-
-  @Before
-  public void setup() {
-    String home = System.getenv("JAVA_HOME");
-    Path jarPath = Paths.get(home, "jre", "lib", "rt.jar");
-
-    // check MINI_JVM_HOME ready
-    // 1. env
-    String miniJvmHome = System.getenv("MINI_JVM_HOME");
-    if (miniJvmHome == null) {
-      // 1.2 check current dir
-      String userDir = System.getProperty("user.dir");
-      if (userDir.endsWith("jvm-core")) {
-        int idx = userDir.lastIndexOf(EnvHolder.FILE_SEPARATOR);
-        miniJvmHome = userDir.substring(0, idx);
-      } else if (userDir.endsWith("mini-jvm")) {
-        miniJvmHome = userDir;
-      }
-    }
-    if (miniJvmHome == null) {
-      throw new IllegalStateException("MINI_JVM_HOME not found");
-    }
-
-    Path exampleJarPath= Paths.get(miniJvmHome, "example", "target", "example.jar");
-    if (!exampleJarPath.toFile().exists()) {
-      throw new IllegalStateException("example.jar not found");
+        // check MINI_JVM_HOME ready
+        // 1. env
+        var miniJvmHome = System.getenv("MINI_JVM_HOME")
+        if (miniJvmHome == null) {
+            // 1.2 check current dir
+            val userDir = System.getProperty("user.dir")
+            if (userDir.endsWith("jvm-core")) {
+                val idx = userDir.lastIndexOf(EnvHolder.FILE_SEPARATOR)
+                miniJvmHome = userDir.substring(0, idx)
+            } else if (userDir.endsWith("mini-jvm")) {
+                miniJvmHome = userDir
+            }
+        }
+        checkNotNull(miniJvmHome) { "MINI_JVM_HOME not found" }
+        val exampleJarPath = Paths.get(miniJvmHome, "example", "target", "example.jar")
+        check(exampleJarPath.toFile().exists()) { "example.jar not found" }
+        val entry = Classpath.parse(exampleJarPath.toFile().absolutePath + EnvHolder.PATH_SEPARATOR + jarPath.toFile().absolutePath)
+        classLoader = ClassLoader("boot", entry)
+        loadLibrary()
     }
 
-    Entry entry = Classpath.parse(exampleJarPath.toFile().getAbsolutePath() + EnvHolder.PATH_SEPARATOR  + jarPath.toFile().getAbsolutePath());
-    classLoader = new ClassLoader("boot", entry);
-    VirtualMachine.Companion.loadLibrary();
-  }
+    @After
+    fun tearDown() {
+        clear()
+    }
 
-  @After
-  public void tearDown() {
-    Heap.clear();
-  }
+    @Test
+    fun test_object() {
+        val aClass = classLoader!!.loadClass("java/lang/Object")
+        Assert.assertNotNull(aClass)
+    }
 
-  @Test
-  public void test_object() {
-    Class aClass = classLoader.loadClass("java/lang/Object");
-    assertNotNull(aClass);
-  }
+    @Test
+    fun test_hello() {
+        val aClass = classLoader!!.loadClass("Hello")
+        Assert.assertNotNull(aClass)
+    }
 
-  @Test
-  public void test_hello() {
-    Class aClass = classLoader.loadClass("Hello");
-    assertNotNull(aClass);
-  }
+    @Test
+    fun test_onjava8_passobject() {
+        val clazz = classLoader!!.loadClass("PassObject")
+        Assert.assertNotNull(clazz)
+    }
 
-  @Test
-  public void test_onjava8_passobject() {
-    Class clazz = classLoader.loadClass("PassObject");
-    assertNotNull(clazz);
-  }
-
-  @Test
-  public void test_system() {
-    Class aClass = classLoader.loadClass("java/lang/System");
-    assertNotNull(aClass);
-  }
+    @Test
+    fun test_system() {
+        val aClass = classLoader!!.loadClass("java/lang/System")
+        Assert.assertNotNull(aClass)
+    }
 }

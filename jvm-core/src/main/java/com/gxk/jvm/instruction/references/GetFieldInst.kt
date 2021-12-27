@@ -1,57 +1,38 @@
-package com.gxk.jvm.instruction.references;
+package com.gxk.jvm.instruction.references
 
-import com.gxk.jvm.instruction.Instruction;
-import com.gxk.jvm.rtda.Frame;
-import com.gxk.jvm.rtda.UnionSlot;
-import com.gxk.jvm.rtda.heap.Field;
-import com.gxk.jvm.rtda.heap.Instance;
-import com.gxk.jvm.util.Utils;
+import com.gxk.jvm.instruction.Instruction
+import com.gxk.jvm.rtda.Frame
+import com.gxk.jvm.rtda.UnionSlot
+import com.gxk.jvm.util.Utils
 
-public class GetFieldInst implements Instruction {
-
-  public final String clazz;
-  public final String fieldName;
-  public final String fieldDescriptor;
-
-  @Override
-  public int offset() {
-    return 3;
-  }
-
-  public GetFieldInst(String clazz, String fieldName, String fieldDescriptor) {
-    this.clazz = clazz;
-    this.fieldName = fieldName;
-    this.fieldDescriptor = fieldDescriptor;
-  }
-
-
-  @Override
-  public void execute(Frame frame) {
-    // hack for java/nio/charset/Charset name Ljava/lang/String;
-    if (clazz.equals("java/nio/charset/Charset") && fieldName.equals("name")) {
-      Instance obj = frame.popRef();
-      Field field = obj.getField(fieldName, fieldDescriptor);
-      field.val = UnionSlot.of(Utils.str2Obj("UTF-8", obj.clazz.classLoader));
-      field.get(frame);
-      return;
+class GetFieldInst(val clazz: String, val fieldName: String, val fieldDescriptor: String) : Instruction {
+    override fun offset(): Int {
+        return 3
     }
 
-    Instance obj = frame.popRef();
-    Field field = obj.getField(fieldName, fieldDescriptor);
-    field.get(frame);
-  }
+    override fun execute(frame: Frame) {
+        // hack for java/nio/charset/Charset name Ljava/lang/String;
+        if (clazz == "java/nio/charset/Charset" && fieldName == "name") {
+            val obj = frame.popRef()
+            val field = obj.getField(fieldName, fieldDescriptor)
+            field.`val` = UnionSlot.of(Utils.str2Obj("UTF-8", obj.clazz.classLoader))
+            field[frame]
+            return
+        }
+        val obj = frame.popRef()
+        val field = obj.getField(fieldName, fieldDescriptor)
+        field[frame]
+    }
 
-  @Override
-  public String format() {
-    return "getfield " + clazz + " " + fieldName + " " + fieldDescriptor;
-  }
+    override fun format(): String {
+        return "getfield $clazz $fieldName $fieldDescriptor"
+    }
 
-  @Override
-  public String toString() {
-    return "GetFieldInst{" +
-        "clazz='" + clazz + '\'' +
-        ", fieldName='" + fieldName + '\'' +
-        ", fieldDescriptor='" + fieldDescriptor + '\'' +
-        '}';
-  }
+    override fun toString(): String {
+        return "GetFieldInst{" +
+                "clazz='" + clazz + '\'' +
+                ", fieldName='" + fieldName + '\'' +
+                ", fieldDescriptor='" + fieldDescriptor + '\'' +
+                '}'
+    }
 }
